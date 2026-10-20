@@ -67,21 +67,20 @@ export default function Sidebar() {
       <div className="flex flex-col">
        {/* Logótipo e Nome */}
         <div className="flex items-center gap-3.5 px-1 mb-8 mt-1">
-          {/* Container externo com a borda gradiente e sombra */}
           <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#9D4EDD] to-[#00E5FF] p-[1.5px] flex items-center justify-center shadow-[0_0_15px_rgba(157,78,221,0.35)] shrink-0">
-            {/* O SEGREDO: 'p-0' e 'overflow-hidden' garantem que a imagem encoste 100% na borda e respeite o arredondamento */}
+
             <div className="relative w-full h-full bg-[#131024] rounded-[10px] overflow-hidden">
               <Image
-                src="/logo.png" // Altere para /logo.png ou o caminho correto da sua imagem
+                src="/logo.png"
                 alt="Logo MANNS"
-                fill // Faz com que a imagem preencha de ponta a ponta o espaço interno de 45px (w-full h-full)
-                className="object-cover" // Estica e corta sem distorcer, eliminando qualquer margem/espaço vazio
+                fill
+                sizes="48px"
+                className="object-cover"
                 priority
               />
             </div>
           </div>
           
-          {/* Nome do projeto ao lado */}
           <span className="text-xl font-bold tracking-wider text-white font-sans">MANNS</span>
         </div>
         {/* Título de Secção */}
@@ -112,8 +111,8 @@ export default function Sidebar() {
                       }
                     : undefined
                 }
-              >
-                {/* Indicador luminoso na borda esquerda com canto arredondado */}
+                >
+
                 {isActive && (
                   <span
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-[3.5px] h-7 rounded-r-full"
@@ -136,9 +135,8 @@ export default function Sidebar() {
         </nav>
       </div>
 
-     {/* Secção Inferior (Ajuda e Configurações em Ícones + Perfil) */}
+     {/* Ajuda e Configurações em Ícones + Perfil */}
       <div className="flex flex-col gap-3">
-        {/* Ícones Lado a Lado */}
         <div className="flex items-center gap-2 px-1">
           {secondaryItems.map((item) => {
             const Icon = item.icon;
@@ -162,10 +160,9 @@ export default function Sidebar() {
           })}
         </div>
 
-        {/* Linha Divisória */}
         <div className="h-[1px] bg-white/5" />
 
-        {/* Perfil do Utilizador */}
+        {/* Perfil */}
         <div className="p-2.5 rounded-2xl bg-[#151226]/60 border border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#9D4EDD] to-[#4DE8B3] flex items-center justify-center text-xs font-bold text-black shadow-inner">

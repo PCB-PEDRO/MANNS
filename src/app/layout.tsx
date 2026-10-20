@@ -13,8 +13,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className="bg-manns-bg text-white min-h-screen flex antialiased">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body 
+        className="bg-[#0B0914] text-white min-h-screen flex antialiased"
+        suppressHydrationWarning
+      >
         <Sidebar />
         <main className="ml-64 flex-1 p-8">
           {children}
