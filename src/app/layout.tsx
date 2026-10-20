@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/sidebar";
+import AppLayout from "@/components/app-layout";
 
 export const metadata: Metadata = {
   title: "MANNS | Gestão Financeira Universitária",
@@ -18,10 +18,7 @@ export default function RootLayout({
         className="bg-[#0B0914] text-white min-h-screen flex antialiased"
         suppressHydrationWarning
       >
-        <Sidebar />
-        <main className="ml-64 flex-1 p-8">
-          {children}
-        </main>
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   );

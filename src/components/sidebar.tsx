@@ -169,8 +169,8 @@ export default function Sidebar() {
               AM
             </div>
             <div className="flex flex-col text-xs">
-              <span className="font-semibold text-white tracking-wide">Arthur Morgan</span>
-              <span className="text-[11px] text-zinc-400">Plano Essencial</span>
+              <span className="font-semibold text-white tracking-wide">Arthur Mendes</span>
+              <span className="text-[11px] text-zinc-400">Ciência da Computação</span>
             </div>
           </div>
           <button 
