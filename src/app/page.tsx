@@ -14,6 +14,9 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   Sparkles,
+  Receipt,
+  Calendar,
+  Trash2,
 } from "lucide-react";
 
 interface Account {
@@ -58,6 +61,15 @@ interface CreditCardData {
   closingDay: string;
   dueDay: string;
   status: "aberta" | "fechada" | "paga";
+}
+
+interface ExpenseItem {
+  id: string;
+  categoryId: string;
+  description: string;
+  amount: number;
+  date: string;
+  paymentMethod: string;
 }
 
 export default function VisaoGeralPage() {
@@ -141,6 +153,132 @@ export default function VisaoGeralPage() {
     { id: "outros", name: "Outros", amount: 235, color: "#F4A261" },
   ]);
 
+  // Lista Detalhada de Gastos por Categoria (Exibida ao Clicar na Categoria)
+  const [categoryExpenses, setCategoryExpenses] = useState<
+    Record<string, ExpenseItem[]>
+  >({
+    moradia: [
+      {
+        id: "exp-m1",
+        categoryId: "moradia",
+        description: "Quarto individual em República Estudantil",
+        amount: 565.0,
+        date: "10 de nov.",
+        paymentMethod: "Pix / Banco do Brasil",
+      },
+      {
+        id: "exp-m2",
+        categoryId: "moradia",
+        description: "Rateio Internet Fibra 500MB da República",
+        amount: 65.0,
+        date: "15 de nov.",
+        paymentMethod: "Débito Nubank",
+      },
+      {
+        id: "exp-m3",
+        categoryId: "moradia",
+        description: "Rateio Conta de Luz Enel da República",
+        amount: 50.0,
+        date: "18 de nov.",
+        paymentMethod: "Débito Nubank",
+      },
+    ],
+    alimentacao: [
+      {
+        id: "exp-a1",
+        categoryId: "alimentacao",
+        description: "Supermercado do Mês (Feira & Básicos)",
+        amount: 245.0,
+        date: "08 de nov.",
+        paymentMethod: "Cartão Nubank •••• 4821",
+      },
+      {
+        id: "exp-a2",
+        categoryId: "alimentacao",
+        description: "Recarga Restaurante Universitário (20 refeições)",
+        amount: 60.0,
+        date: "03 de nov.",
+        paymentMethod: "Pix / Inter",
+      },
+      {
+        id: "exp-a3",
+        categoryId: "alimentacao",
+        description: "Lanches rápidos no Centro de Convivência",
+        amount: 52.0,
+        date: "12 de nov.",
+        paymentMethod: "Cartão Nubank •••• 4821",
+      },
+      {
+        id: "exp-a4",
+        categoryId: "alimentacao",
+        description: "Padaria e café no campus",
+        amount: 28.0,
+        date: "17 de nov.",
+        paymentMethod: "Conta Nubank",
+      },
+    ],
+    estudos: [
+      {
+        id: "exp-e1",
+        categoryId: "estudos",
+        description: "Livro de Estruturas de Dados e Algoritmos",
+        amount: 95.0,
+        date: "05 de nov.",
+        paymentMethod: "Cartão Nubank •••• 4821",
+      },
+      {
+        id: "exp-e2",
+        categoryId: "estudos",
+        description: "Xerox, encadernações e apostilas",
+        amount: 65.0,
+        date: "12 de nov.",
+        paymentMethod: "Conta Inter",
+      },
+      {
+        id: "exp-e3",
+        categoryId: "estudos",
+        description: "Caderno universitário e canetas técnicas",
+        amount: 20.0,
+        date: "16 de nov.",
+        paymentMethod: "Cartão Nubank •••• 4821",
+      },
+    ],
+    outros: [
+      {
+        id: "exp-o1",
+        categoryId: "outros",
+        description: "Recarga Passe Ônibus Estudantil",
+        amount: 95.0,
+        date: "04 de nov.",
+        paymentMethod: "Cartão C6 Standard",
+      },
+      {
+        id: "exp-o2",
+        categoryId: "outros",
+        description: "Farmácia Droga Raia (Saúde e Vitaminas)",
+        amount: 48.5,
+        date: "14 de nov.",
+        paymentMethod: "Cartão Nubank •••• 4821",
+      },
+      {
+        id: "exp-o3",
+        categoryId: "outros",
+        description: "Assinatura Spotify Universitário",
+        amount: 11.9,
+        date: "16 de nov.",
+        paymentMethod: "Cartão Nubank •••• 4821",
+      },
+      {
+        id: "exp-o4",
+        categoryId: "outros",
+        description: "Lazer de Fim de Semana com Turma do Campus",
+        amount: 79.6,
+        date: "19 de nov.",
+        paymentMethod: "Conta Nubank",
+      },
+    ],
+  });
+
   // Estado do Orçamento Restante
   const [budgets, setBudgets] = useState<BudgetItem[]>([
     {
@@ -178,7 +316,15 @@ export default function VisaoGeralPage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Estados dos Modais
+  // Estado do Modal de Detalhes da Categoria (aberto ao clicar)
+  const [selectedCategoryModal, setSelectedCategoryModal] =
+    useState<CategoryExpense | null>(null);
+  const [newCatExpenseDesc, setNewCatExpenseDesc] = useState("");
+  const [newCatExpenseAmount, setNewCatExpenseAmount] = useState("");
+  const [newCatExpensePaymentMethod, setNewCatExpensePaymentMethod] =
+    useState("Conta Nubank");
+
+  // Estados dos Modais de Transação
   const [modalType, setModalType] = useState<"receita" | "despesa" | null>(null);
   const [amountInput, setAmountInput] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("nubank");
@@ -266,7 +412,12 @@ export default function VisaoGeralPage() {
       );
       showToast(`Receita de ${formatCurrency(numericValue)} adicionada com sucesso!`);
     } else if (modalType === "despesa") {
+      let paymentDesc = "";
+
       if (selectedAccountId.startsWith("card-")) {
+        const foundCard = creditCards.find((c) => c.id === selectedAccountId);
+        paymentDesc = foundCard ? `Cartão ${foundCard.name}` : "Cartão de Crédito";
+
         setCreditCards((prev) =>
           prev.map((c) =>
             c.id === selectedAccountId
@@ -281,6 +432,9 @@ export default function VisaoGeralPage() {
           `Despesa de ${formatCurrency(numericValue)} lançada no cartão!`
         );
       } else {
+        const foundAcc = accounts.find((a) => a.id === selectedAccountId);
+        paymentDesc = foundAcc ? `Conta ${foundAcc.bankName}` : "Conta Corrente";
+
         setAccounts((prev) =>
           prev.map((acc) =>
             acc.id === selectedAccountId
@@ -293,6 +447,24 @@ export default function VisaoGeralPage() {
         );
       }
 
+      // Adiciona o novo gasto na lista detalhada da respectiva categoria
+      const newExpense: ExpenseItem = {
+        id: `exp-${Date.now()}`,
+        categoryId: selectedCategoryId,
+        description:
+          categories.find((cat) => cat.id === selectedCategoryId)?.name + " (Novo gasto)" ||
+          "Nova despesa cadastrada",
+        amount: numericValue,
+        date: "Hoje",
+        paymentMethod: paymentDesc,
+      };
+
+      setCategoryExpenses((prev) => ({
+        ...prev,
+        [selectedCategoryId]: [newExpense, ...(prev[selectedCategoryId] || [])],
+      }));
+
+      // Atualiza o total consolidado da categoria
       setCategories((prev) =>
         prev.map((cat) =>
           cat.id === selectedCategoryId
@@ -406,6 +578,65 @@ export default function VisaoGeralPage() {
     showToast(`Cartão "${newCardName}" adicionado à lista!`);
   };
 
+  // Ações de Adicionar e Remover Gastos da Categoria
+  const handleAddExpenseToCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCategoryModal) return;
+    const cleanAmount = parseFloat(newCatExpenseAmount.replace(",", "."));
+    if (!newCatExpenseDesc.trim() || isNaN(cleanAmount) || cleanAmount <= 0) {
+      showToast("Preencha a descrição e um valor válido para o gasto.");
+      return;
+    }
+
+    const newItem: ExpenseItem = {
+      id: `exp-${Date.now()}`,
+      categoryId: selectedCategoryModal.id,
+      description: newCatExpenseDesc.trim(),
+      amount: cleanAmount,
+      date: "Hoje",
+      paymentMethod: newCatExpensePaymentMethod,
+    };
+
+    const catId = selectedCategoryModal.id;
+    const updatedList = [newItem, ...(categoryExpenses[catId] || [])];
+
+    setCategoryExpenses((prev) => ({
+      ...prev,
+      [catId]: updatedList,
+    }));
+
+    // Atualiza o total consolidado da categoria
+    setCategories((prev) =>
+      prev.map((cat) =>
+        cat.id === catId ? { ...cat, amount: Math.round(cat.amount + cleanAmount) } : cat
+      )
+    );
+
+    setNewCatExpenseDesc("");
+    setNewCatExpenseAmount("");
+    showToast(`Gasto "${newItem.description}" adicionado a ${selectedCategoryModal.name}!`);
+  };
+
+  const handleRemoveCategoryExpense = (catId: string, expenseId: string) => {
+    const currentList = categoryExpenses[catId] || [];
+    const itemToRemove = currentList.find((i) => i.id === expenseId);
+    const updatedList = currentList.filter((i) => i.id !== expenseId);
+
+    setCategoryExpenses((prev) => ({
+      ...prev,
+      [catId]: updatedList,
+    }));
+
+    if (itemToRemove) {
+      setCategories((prev) =>
+        prev.map((cat) =>
+          cat.id === catId ? { ...cat, amount: Math.max(0, cat.amount - itemToRemove.amount) } : cat
+        )
+      );
+      showToast(`Gasto "${itemToRemove.description}" removido.`);
+    }
+  };
+
   return (
     <div className="max-w-[1240px] mx-auto space-y-8 pb-12 select-none relative">
       {/* TOAST FLUTUANTE DE FEEDBACK */}
@@ -426,7 +657,7 @@ export default function VisaoGeralPage() {
             Bom dia, Arthur
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
-            Confira como estão suas finanças neste mês.
+            Resumo financeiro e acompanhamento de metas para estudantes
           </p>
         </div>
 
@@ -562,7 +793,6 @@ export default function VisaoGeralPage() {
 
       {/* SEÇÃO 2: CARTÕES DE CRÉDITO (LISTA DISCRETA E MINIMALISTA, UM CARTÃO ABAIXO DO OUTRO) */}
       <section className="rounded-2xl bg-[#131022] border border-white/[0.07] p-5 sm:p-6 space-y-4">
-        {/* Cabeçalho Discreto do Card de Cartões */}
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2.5">
             <span className="text-xs font-bold uppercase tracking-wider text-white">
@@ -799,11 +1029,14 @@ export default function VisaoGeralPage() {
                       strokeLinecap="butt"
                       onMouseEnter={() => setHoveredCategory(seg)}
                       onMouseLeave={() => setHoveredCategory(null)}
+                      onClick={() => setSelectedCategoryModal(seg)}
                       className="transition-all duration-300 cursor-pointer"
                       style={{
                         opacity: isAnyHovered && !isHovered ? 0.3 : 1,
                       }}
-                    />
+                    >
+                      <title>{`Clique para abrir todos os gastos de ${seg.name}`}</title>
+                    </circle>
                   );
                 })}
               </svg>
@@ -835,7 +1068,9 @@ export default function VisaoGeralPage() {
                     key={cat.id}
                     onMouseEnter={() => setHoveredCategory(cat)}
                     onMouseLeave={() => setHoveredCategory(null)}
-                    className="flex items-center justify-between py-3.5 px-2 rounded-lg hover:bg-white/[0.02] transition-all cursor-pointer"
+                    onClick={() => setSelectedCategoryModal(cat)}
+                    className="flex items-center justify-between py-3.5 px-2.5 rounded-xl hover:bg-white/[0.04] transition-all cursor-pointer group"
+                    title={`Clique para ver todos os gastos de ${cat.name}`}
                     style={{
                       opacity: hoveredCategory && !isHovered ? 0.4 : 1,
                     }}
@@ -852,18 +1087,18 @@ export default function VisaoGeralPage() {
                         className={`text-xs transition-colors ${
                           isHovered
                             ? "text-white font-semibold"
-                            : "text-zinc-300 font-medium"
+                            : "text-zinc-200 font-medium group-hover:text-white"
                         }`}
                       >
                         {cat.name}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-3 text-xs">
                       <span className="font-bold text-white">
                         {formatCurrency(cat.amount, false)}
                       </span>
-                      <span className="text-zinc-500 w-8 text-right">
+                      <span className="text-zinc-500 w-8 text-right font-medium">
                         {percent}%
                       </span>
                     </div>
@@ -883,15 +1118,30 @@ export default function VisaoGeralPage() {
             <h2 className="text-lg font-bold text-white">Orçamento Restante</h2>
           </div>
 
-          <div className="flex flex-col justify-between gap-6 my-auto">
+          <div className="flex flex-col justify-between gap-5 my-auto">
             {budgets.map((item) => {
               const remaining = Math.max(0, item.limit - item.spent);
               const progress = Math.min((item.spent / item.limit) * 100, 100);
 
+              const budgetCategoryMap: Record<string, string> = {
+                mercado: "alimentacao",
+                livros: "estudos",
+                lazer: "outros",
+              };
+
               return (
-                <div key={item.id} className="flex items-start gap-4">
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    const targetCatId = budgetCategoryMap[item.id];
+                    const found = categories.find((c) => c.id === targetCatId);
+                    if (found) setSelectedCategoryModal(found);
+                  }}
+                  className="flex items-start gap-3.5 p-2 rounded-xl hover:bg-white/[0.03] transition-all cursor-pointer group"
+                  title={`Clique para ver os gastos de ${item.name}`}
+                >
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 group-hover:scale-105 transition-transform"
                     style={{
                       backgroundColor: `${item.color}15`,
                       color: item.color,
@@ -900,9 +1150,9 @@ export default function VisaoGeralPage() {
                     {item.initials}
                   </div>
 
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-white">
+                      <span className="text-xs font-semibold text-white group-hover:text-[#4DE8B3] transition-colors">
                         {item.name}
                       </span>
                       <span className="text-xs text-zinc-400">
@@ -920,10 +1170,15 @@ export default function VisaoGeralPage() {
                       />
                     </div>
 
-                    <span className="text-[11px] text-zinc-500 block">
-                      {formatCurrency(item.spent, false)} gastos de{" "}
-                      {formatCurrency(item.limit, false)}
-                    </span>
+                    <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                      <span>
+                        {formatCurrency(item.spent, false)} gastos de{" "}
+                        {formatCurrency(item.limit, false)}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                        Ver extrato →
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -938,6 +1193,8 @@ export default function VisaoGeralPage() {
           </div>
         </div>
       </section>
+
+
 
       {/* MODAL 1: ADICIONAR RECEITA OU DESPESA */}
       {modalType && (
@@ -1331,6 +1588,190 @@ export default function VisaoGeralPage() {
                 >
                   <Plus size={14} strokeWidth={2.5} />
                   <span>Cadastrar Cartão</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: DETALHES DE GASTOS DA CATEGORIA */}
+      {selectedCategoryModal && (
+        <div
+          onClick={() => setSelectedCategoryModal(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#131024] p-5 sm:p-6 shadow-2xl flex flex-col max-h-[90vh]"
+          >
+            {/* Cabeçalho do Modal */}
+            <div className="flex items-start justify-between pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    backgroundColor: `${selectedCategoryModal.color}20`,
+                    border: `1px solid ${selectedCategoryModal.color}40`,
+                  }}
+                >
+                  <Receipt size={20} style={{ color: selectedCategoryModal.color }} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: selectedCategoryModal.color }}
+                    />
+                    <h3 className="text-base sm:text-lg font-bold text-white">
+                      {selectedCategoryModal.name}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Todos os gastos desta categoria no mês
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryModal(null)}
+                className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Painel de Métricas da Categoria */}
+            <div className="grid grid-cols-3 gap-3 my-4">
+              <div className="bg-[#19152B] p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">Total Gasto</span>
+                <span className="text-sm sm:text-base font-bold text-white mt-0.5 block">
+                  {formatCurrency(
+                    (categoryExpenses[selectedCategoryModal.id] || []).reduce((acc, curr) => acc + curr.amount, 0)
+                  )}
+                </span>
+              </div>
+              <div className="bg-[#19152B] p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">Lançamentos</span>
+                <span className="text-sm sm:text-base font-bold text-zinc-200 mt-0.5 block">
+                  {(categoryExpenses[selectedCategoryModal.id] || []).length} despesas
+                </span>
+              </div>
+              <div className="bg-[#19152B] p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">Proporção</span>
+                <span className="text-sm sm:text-base font-bold text-[#4DE8B3] mt-0.5 block">
+                  {Math.round(
+                    (((categoryExpenses[selectedCategoryModal.id] || []).reduce((acc, curr) => acc + curr.amount, 0)) /
+                      totalSpent) *
+                      100
+                  ) || 0}
+                  % do total
+                </span>
+              </div>
+            </div>
+
+            {/* Lista com Rolagem dos Gastos */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-2 mb-4 max-h-56 sm:max-h-64">
+              {(categoryExpenses[selectedCategoryModal.id] || []).length === 0 ? (
+                <div className="text-center py-8 text-zinc-500 text-xs">
+                  Nenhum gasto registrado nesta categoria ainda.
+                </div>
+              ) : (
+                (categoryExpenses[selectedCategoryModal.id] || []).map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-[#19152B]/60 hover:bg-[#19152B] border border-white/[0.04] hover:border-white/10 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: selectedCategoryModal.color }}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-white truncate">
+                          {item.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-zinc-400">
+                          <span>{item.date}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <CreditCard size={10} className="text-zinc-500" />
+                            {item.paymentMethod}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs sm:text-sm font-semibold text-[#FF85A1]">
+                        - {formatCurrency(item.amount)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCategoryExpense(selectedCategoryModal.id, item.id)}
+                        title="Remover gasto"
+                        className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 rounded transition-all cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Formulário Rápido de Adição */}
+            <form
+              onSubmit={handleAddExpenseToCategory}
+              className="border-t border-white/5 pt-3 mt-auto space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1">
+                  <Plus size={12} className="text-[#4DE8B3]" />
+                  Adicionar novo gasto em {selectedCategoryModal.name}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <input
+                  type="text"
+                  placeholder="Ex: Compra na farmácia"
+                  value={newCatExpenseDesc}
+                  onChange={(e) => setNewCatExpenseDesc(e.target.value)}
+                  className="sm:col-span-5 px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#4DE8B3]"
+                />
+                <input
+                  type="text"
+                  placeholder="R$ 0,00"
+                  value={newCatExpenseAmount}
+                  onChange={(e) => setNewCatExpenseAmount(e.target.value)}
+                  className="sm:col-span-3 px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#4DE8B3]"
+                />
+                <select
+                  value={newCatExpensePaymentMethod}
+                  onChange={(e) => setNewCatExpensePaymentMethod(e.target.value)}
+                  className="sm:col-span-4 px-2 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white focus:outline-none focus:border-[#4DE8B3] cursor-pointer"
+                >
+                  <option value="Conta Nubank">Conta Nubank</option>
+                  <option value="Conta Inter">Conta Inter</option>
+                  <option value="Banco do Brasil">Banco do Brasil</option>
+                  <option value="Cartão Nubank">Cartão Nubank</option>
+                  <option value="Cartão C6">Cartão C6</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategoryModal(null)}
+                  className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-semibold hover:brightness-110 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus size={13} strokeWidth={2.5} />
+                  Adicionar
                 </button>
               </div>
             </form>

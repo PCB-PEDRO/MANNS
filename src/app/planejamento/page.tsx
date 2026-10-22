@@ -19,9 +19,20 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Trash2,
+  ChevronRight,
+  Receipt,
+  CreditCard,
 } from "lucide-react";
 
 // Tipos e Interfaces
+interface CategoryExpenseItem {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  paymentMethod: string;
+}
+
 interface FixedEntry {
   id: string;
   description: string;
@@ -265,6 +276,116 @@ export default function PlanejamentoPage() {
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(10);
   const [showDistributionMenu, setShowDistributionMenu] = useState(false);
 
+  // Modal de Detalhes da Categoria de Gastos
+  const [selectedCategoryModal, setSelectedCategoryModal] = useState<CategorySpending | null>(null);
+  const [newExpenseDesc, setNewExpenseDesc] = useState("");
+  const [newExpenseAmount, setNewExpenseAmount] = useState("");
+  const [newExpensePaymentMethod, setNewExpensePaymentMethod] = useState("Conta Nubank");
+
+  // Lista detalhada de gastos por categoria estudantil
+  const [categoryExpenses, setCategoryExpenses] = useState<Record<string, CategoryExpenseItem[]>>({
+    moradia: [
+      { id: "cm-1", description: "Aluguel quarto em república", amount: 565.0, date: "05 nov.", paymentMethod: "Conta Nubank" },
+      { id: "cm-2", description: "Rateio de internet da república", amount: 65.0, date: "10 nov.", paymentMethod: "Conta Inter" },
+      { id: "cm-3", description: "Rateio conta de energia", amount: 50.0, date: "15 nov.", paymentMethod: "Conta Nubank" },
+    ],
+    alimentacao: [
+      { id: "ca-1", description: "Feira livre do bairro e hortifrúti", amount: 146.32, date: "18 nov.", paymentMethod: "Cartão Nubank" },
+      { id: "ca-2", description: "Almoço e janta no RU (Recarga)", amount: 84.0, date: "12 nov.", paymentMethod: "Conta Inter" },
+      { id: "ca-3", description: "Supermercado itens básicos (Arroz, feijão, ovos)", amount: 118.68, date: "07 nov.", paymentMethod: "Cartão Nubank" },
+      { id: "ca-4", description: "Café da manhã e lanches na cantina", amount: 36.0, date: "03 nov.", paymentMethod: "Conta Nubank" },
+    ],
+    estudos: [
+      { id: "ce-1", description: "Livro de Estrutura de Dados (Sebo)", amount: 68.5, date: "05 nov.", paymentMethod: "Cartão C6" },
+      { id: "ce-2", description: "Xerox apostilas & impressão de artigos", amount: 42.5, date: "14 nov.", paymentMethod: "Conta Nubank" },
+      { id: "ce-3", description: "Caderno universitário & canetas", amount: 34.0, date: "02 nov.", paymentMethod: "Conta Inter" },
+    ],
+    transporte: [
+      { id: "ct-1", description: "Recarga Bilhete Único Estudantil", amount: 95.0, date: "06 nov.", paymentMethod: "Conta Nubank" },
+      { id: "ct-2", description: "Metrô integração campus universitário", amount: 35.0, date: "16 nov.", paymentMethod: "Conta Inter" },
+    ],
+    lazer: [
+      { id: "cl-1", description: "Confraternização dos calouros (Rateio)", amount: 55.0, date: "15 nov.", paymentMethod: "Conta Nubank" },
+      { id: "cl-2", description: "Cinema universitário com meia-entrada", amount: 22.0, date: "09 nov.", paymentMethod: "Cartão Nubank" },
+      { id: "cl-3", description: "Açaí pós-treino no campus", amount: 18.0, date: "04 nov.", paymentMethod: "Conta Inter" },
+    ],
+    outros: [
+      { id: "co-1", description: "Farmácia (Vitamina C e analgésico)", amount: 28.0, date: "11 nov.", paymentMethod: "Cartão C6" },
+      { id: "co-2", description: "Reparo de fone de ouvido", amount: 17.0, date: "08 nov.", paymentMethod: "Conta Nubank" },
+    ],
+  });
+
+  // Ações sobre a lista de gastos da categoria
+  const handleAddExpenseToCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCategoryModal) return;
+    const cleanAmount = parseFloat(newExpenseAmount.replace(",", "."));
+    if (!newExpenseDesc.trim() || isNaN(cleanAmount) || cleanAmount <= 0) {
+      showToast("Preencha a descrição e um valor válido para o gasto.");
+      return;
+    }
+
+    const newItem: CategoryExpenseItem = {
+      id: `ce-${Date.now()}`,
+      description: newExpenseDesc.trim(),
+      amount: cleanAmount,
+      date: "Hoje",
+      paymentMethod: newExpensePaymentMethod,
+    };
+
+    const catId = selectedCategoryModal.id;
+    const updatedList = [newItem, ...(categoryExpenses[catId] || [])];
+
+    setCategoryExpenses((prev) => ({
+      ...prev,
+      [catId]: updatedList,
+    }));
+
+    // Recalcular totais da categoria
+    const newTotal = updatedList.reduce((sum, item) => sum + item.amount, 0);
+    setCategoriesSpending((prev) => {
+      const nextCategories = prev.map((c) =>
+        c.id === catId ? { ...c, amount: Math.round(newTotal) } : c
+      );
+      const overallTotal = nextCategories.reduce((acc, curr) => acc + curr.amount, 0) || 1;
+      return nextCategories.map((c) => ({
+        ...c,
+        percent: Math.round((c.amount / overallTotal) * 100),
+      }));
+    });
+
+    setNewExpenseDesc("");
+    setNewExpenseAmount("");
+    showToast(`Gasto "${newItem.description}" adicionado a ${selectedCategoryModal.name}!`);
+  };
+
+  const handleRemoveCategoryExpense = (catId: string, expenseId: string) => {
+    const currentList = categoryExpenses[catId] || [];
+    const itemToRemove = currentList.find((i) => i.id === expenseId);
+    const updatedList = currentList.filter((i) => i.id !== expenseId);
+
+    setCategoryExpenses((prev) => ({
+      ...prev,
+      [catId]: updatedList,
+    }));
+
+    const newTotal = updatedList.reduce((sum, item) => sum + item.amount, 0);
+    setCategoriesSpending((prev) => {
+      const nextCategories = prev.map((c) =>
+        c.id === catId ? { ...c, amount: Math.round(newTotal) } : c
+      );
+      const overallTotal = nextCategories.reduce((acc, curr) => acc + curr.amount, 0) || 1;
+      return nextCategories.map((c) => ({
+        ...c,
+        percent: Math.round((c.amount / overallTotal) * 100),
+      }));
+    });
+
+    if (itemToRemove) {
+      showToast(`Gasto "${itemToRemove.description}" removido.`);
+    }
+  };
+
   // Estados de Hover interativo nos gráficos
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredEvolutionCategory, setHoveredEvolutionCategory] = useState<CategoryEvolution | null>(null);
@@ -285,8 +406,9 @@ export default function PlanejamentoPage() {
     [categoriesSpending]
   );
 
-  // Formatação em Moeda
+  // Formatação em Moeda segura
   const formatCurrency = (val: number, decimals = true) => {
+    if (typeof val !== "number" || isNaN(val)) return decimals ? "R$ 0,00" : "R$ 0";
     return val.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
@@ -635,6 +757,8 @@ export default function PlanejamentoPage() {
             </div>
           </div>
 
+
+
           {/* Formulário Inline de Despesa */}
           <form
             onSubmit={handleAddFixedExpense}
@@ -715,11 +839,11 @@ export default function PlanejamentoPage() {
             <div className="bg-[#19152B]/80 rounded-xl p-3 flex items-center justify-between border border-white/[0.04] mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">Movimentado</span>
-                <span className="text-xs sm:text-sm font-semibold text-white">R$ 12.424,72</span>
+                <span className="text-xs sm:text-sm font-semibold text-white">R$ 1.850,00</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">Saldo do mês</span>
-                <span className="text-xs sm:text-sm font-bold text-[#4DE8B3]">+ R$ 2.059,08</span>
+                <span className="text-xs sm:text-sm font-bold text-[#4DE8B3]">+ R$ 370,00</span>
               </div>
             </div>
 
@@ -728,16 +852,30 @@ export default function PlanejamentoPage() {
               {filteredTransactions.slice(0, 4).map((tx) => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors border border-transparent hover:border-white/5"
+                  onClick={() => {
+                    const cat = categoriesSpending.find(
+                      (c) =>
+                        c.name.toLowerCase().includes(tx.category.toLowerCase()) ||
+                        tx.category.toLowerCase().includes(c.name.toLowerCase()) ||
+                        c.id.toLowerCase().includes(tx.category.toLowerCase())
+                    );
+                    if (cat) setSelectedCategoryModal(cat);
+                  }}
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors border border-transparent hover:border-white/5 cursor-pointer group"
+                  title={`Clique para ver todos os gastos de ${tx.category}`}
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="w-2 h-2 rounded-full shrink-0 group-hover:scale-125 transition-transform"
                       style={{ backgroundColor: tx.color }}
                     />
                     <div>
-                      <h4 className="text-xs sm:text-sm font-medium text-white">{tx.title}</h4>
-                      <p className="text-[11px] text-zinc-500">{tx.category}</p>
+                      <h4 className="text-xs sm:text-sm font-medium text-white group-hover:text-[#D6B2FF] transition-colors">
+                        {tx.title}
+                      </h4>
+                      <span className="text-[11px] text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                        {tx.category}
+                      </span>
                     </div>
                   </div>
 
@@ -796,16 +934,30 @@ export default function PlanejamentoPage() {
               {filteredForecast.slice(0, 4).map((fc) => (
                 <div
                   key={fc.id}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors border border-transparent hover:border-white/5"
+                  onClick={() => {
+                    const cat = categoriesSpending.find(
+                      (c) =>
+                        c.name.toLowerCase().includes(fc.category.toLowerCase()) ||
+                        fc.category.toLowerCase().includes(c.name.toLowerCase()) ||
+                        c.id.toLowerCase().includes(fc.category.toLowerCase())
+                    );
+                    if (cat) setSelectedCategoryModal(cat);
+                  }}
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors border border-transparent hover:border-white/5 cursor-pointer group"
+                  title={`Clique para ver todos os gastos de ${fc.category}`}
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="w-2 h-2 rounded-full shrink-0 group-hover:scale-125 transition-transform"
                       style={{ backgroundColor: fc.dotColor }}
                     />
                     <div>
-                      <h4 className="text-xs sm:text-sm font-medium text-white">{fc.title}</h4>
-                      <p className="text-[11px] text-zinc-500">{fc.category}</p>
+                      <h4 className="text-xs sm:text-sm font-medium text-white group-hover:text-[#D6B2FF] transition-colors">
+                        {fc.title}
+                      </h4>
+                      <p className="text-[11px] text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                        {fc.category}
+                      </p>
                     </div>
                   </div>
 
@@ -813,7 +965,10 @@ export default function PlanejamentoPage() {
                     {/* Badge de Status Interativo */}
                     <button
                       type="button"
-                      onClick={() => toggleForecastStatus(fc.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleForecastStatus(fc.id);
+                      }}
                       title="Clique para alternar status"
                       className={`text-[10px] sm:text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
                         fc.status === "Confirmado"
@@ -874,12 +1029,12 @@ export default function PlanejamentoPage() {
                     <button
                       onClick={() => {
                         setShowDistributionMenu(false);
-                        showToast("Visualização redefinida para o padrão.");
+                        setSelectedCategoryModal(categoriesSpending[0]);
                       }}
                       className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg flex items-center gap-2 cursor-pointer"
                     >
                       <AlertCircle size={14} className="text-[#D6B2FF]" />
-                      Ver detalhes
+                      Ver detalhes de gastos
                     </button>
                   </div>
                 )}
@@ -923,6 +1078,10 @@ export default function PlanejamentoPage() {
                           }}
                           onMouseEnter={() => setHoveredCategory(segment.id)}
                           onMouseLeave={() => setHoveredCategory(null)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCategoryModal(segment);
+                          }}
                         />
                       );
                     })}
@@ -953,25 +1112,28 @@ export default function PlanejamentoPage() {
                 {categoriesSpending.map((cat) => {
                   const isHovered = hoveredCategory === cat.id;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={cat.id}
                       onMouseEnter={() => setHoveredCategory(cat.id)}
                       onMouseLeave={() => setHoveredCategory(null)}
-                      className={`flex items-center justify-between p-1.5 rounded-lg transition-all cursor-pointer ${
-                        isHovered ? "bg-white/[0.06] translate-x-1" : "hover:bg-white/[0.02]"
+                      onClick={() => setSelectedCategoryModal(cat)}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer group select-none text-left ${
+                        isHovered ? "bg-white/[0.08] translate-x-1" : "hover:bg-white/[0.04]"
                       }`}
+                      title={`Clique para ver todos os gastos em ${cat.name}`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <span
                           className="w-2.5 h-2.5 rounded-full shrink-0"
                           style={{
                             backgroundColor: cat.color,
-                            boxShadow: isHovered ? `0 0 6px ${cat.color}` : "none",
+                            boxShadow: isHovered ? `0 0 8px ${cat.color}` : "none",
                           }}
                         />
                         <span
-                          className={`text-xs ${
-                            isHovered ? "text-white font-semibold" : "text-zinc-300"
+                          className={`text-xs transition-colors ${
+                            isHovered ? "text-white font-semibold" : "text-zinc-300 group-hover:text-white"
                           }`}
                         >
                           {cat.name}
@@ -985,8 +1147,12 @@ export default function PlanejamentoPage() {
                         <span className="text-[11px] text-zinc-500 w-7 text-right">
                           {cat.percent}%
                         </span>
+                        <ChevronRight
+                          size={14}
+                          className="text-zinc-500 group-hover:text-white group-hover:translate-x-0.5 transition-all"
+                        />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1084,17 +1250,23 @@ export default function PlanejamentoPage() {
                   return (
                     <g
                       key={item.id}
-                      className="cursor-pointer"
+                      className="cursor-pointer group"
+                      style={{ pointerEvents: "all" }}
                       onMouseEnter={() => setHoveredEvolutionCategory(item)}
                       onMouseLeave={() => setHoveredEvolutionCategory(null)}
+                      onClick={() => {
+                        const cat = categoriesSpending.find((c) => c.id === item.id);
+                        if (cat) setSelectedCategoryModal(cat);
+                      }}
                     >
-                      {/* Área de Captura Hover invisível */}
+                      {/* Área de Captura Hover invisível com pointer-events all */}
                       <rect
                         x={startX - 10}
                         y="15"
                         width={groupWidth - 5}
                         height="150"
-                        fill="transparent"
+                        fill="rgba(0,0,0,0.001)"
+                        style={{ pointerEvents: "all", cursor: "pointer" }}
                       />
 
                       {/* Barra 1: Gasto Atual (Lilás) */}
@@ -1108,6 +1280,8 @@ export default function PlanejamentoPage() {
                         style={{
                           opacity: hoveredEvolutionCategory && !isHovered ? 0.4 : 1,
                           filter: isHovered ? "drop-shadow(0 0 6px #D6B2FF)" : "none",
+                          pointerEvents: "all",
+                          cursor: "pointer",
                         }}
                         className="transition-all duration-300"
                       />
@@ -1123,6 +1297,8 @@ export default function PlanejamentoPage() {
                         style={{
                           opacity: hoveredEvolutionCategory && !isHovered ? 0.4 : 1,
                           filter: isHovered ? "drop-shadow(0 0 6px #4DE8B3)" : "none",
+                          pointerEvents: "all",
+                          cursor: "pointer",
                         }}
                         className="transition-all duration-300"
                       />
@@ -1137,6 +1313,8 @@ export default function PlanejamentoPage() {
                         fill="#4A3B69"
                         style={{
                           opacity: hoveredEvolutionCategory && !isHovered ? 0.4 : 1,
+                          pointerEvents: "all",
+                          cursor: "pointer",
                         }}
                         className="transition-all duration-300"
                       />
@@ -1149,7 +1327,8 @@ export default function PlanejamentoPage() {
                         fill={isHovered ? "#FFFFFF" : "#71717A"}
                         fontSize="11"
                         fontWeight={isHovered ? "600" : "400"}
-                        className="transition-colors duration-200"
+                        className="transition-colors duration-200 cursor-pointer"
+                        style={{ pointerEvents: "all" }}
                       >
                         {item.name}
                       </text>
@@ -1276,17 +1455,32 @@ export default function PlanejamentoPage() {
                 .map((tx) => (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#19152B] hover:bg-[#1e1933] transition-colors border border-white/5"
+                    onClick={() => {
+                      const cat = categoriesSpending.find(
+                        (c) =>
+                          c.name.toLowerCase().includes(tx.category.toLowerCase()) ||
+                          tx.category.toLowerCase().includes(c.name.toLowerCase()) ||
+                          c.id.toLowerCase().includes(tx.category.toLowerCase())
+                      );
+                      if (cat) {
+                        setShowAllTransactionsModal(false);
+                        setSelectedCategoryModal(cat);
+                      }
+                    }}
+                    className="flex items-center justify-between p-3 rounded-xl bg-[#19152B] hover:bg-[#1e1933] transition-colors border border-white/5 cursor-pointer group"
+                    title={`Ver gastos de ${tx.category}`}
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        className="w-2.5 h-2.5 rounded-full shrink-0 group-hover:scale-125 transition-transform"
                         style={{ backgroundColor: tx.color }}
                       />
                       <div>
-                        <h4 className="text-sm font-semibold text-white">{tx.title}</h4>
+                        <h4 className="text-sm font-semibold text-white group-hover:text-[#D6B2FF] transition-colors">
+                          {tx.title}
+                        </h4>
                         <div className="flex items-center gap-2 text-xs text-zinc-400">
-                          <span>{tx.category}</span>
+                          <span className="text-zinc-300 font-medium">{tx.category}</span>
                           <span>•</span>
                           <span>{tx.date}</span>
                         </div>
@@ -1409,46 +1603,46 @@ export default function PlanejamentoPage() {
               {selectedCalendarDay === 10 && (
                 <div className="flex items-center justify-between text-xs text-zinc-200">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#FF85A1]" />
-                    <span>Aluguel residencial (Moradia)</span>
+                    <span className="w-2 h-2 rounded-full bg-[#9D4EDD]" />
+                    <span>Quarto em república (Moradia)</span>
                   </div>
-                  <span className="font-semibold text-white">R$ 2.100,00</span>
+                  <span className="font-semibold text-white">R$ 680,00</span>
                 </div>
               )}
               {selectedCalendarDay === 15 && (
                 <div className="flex items-center justify-between text-xs text-zinc-200">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#4DE8B3]" />
-                    <span>Salário mensal (Receita fixa)</span>
+                    <span>Bolsa de estágio (Receita fixa)</span>
                   </div>
-                  <span className="font-semibold text-[#4DE8B3]">+ R$ 8.450,00</span>
+                  <span className="font-semibold text-[#4DE8B3]">+ R$ 1.200,00</span>
                 </div>
               )}
               {selectedCalendarDay === 18 && (
                 <div className="flex items-center justify-between text-xs text-zinc-200">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#9D4EDD]" />
-                    <span>Internet e celular (Serviços)</span>
+                    <span>Rateio internet da república (Moradia)</span>
                   </div>
-                  <span className="font-semibold text-white">R$ 214,80</span>
+                  <span className="font-semibold text-white">R$ 65,00</span>
                 </div>
               )}
               {selectedCalendarDay === 22 && (
                 <div className="flex items-center justify-between text-xs text-zinc-200">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#9D4EDD]" />
-                    <span>Seguro do carro (Transporte)</span>
+                    <span className="w-2 h-2 rounded-full bg-[#00E5FF]" />
+                    <span>Passe transporte estudantil (Transporte)</span>
                   </div>
-                  <span className="font-semibold text-white">R$ 287,00</span>
+                  <span className="font-semibold text-white">R$ 95,00</span>
                 </div>
               )}
               {selectedCalendarDay === 24 && (
                 <div className="flex items-center justify-between text-xs text-zinc-200">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#9D4EDD]" />
-                    <span>Conta de Energia Elétrica (Moradia)</span>
+                    <span>Rateio conta de luz (Moradia)</span>
                   </div>
-                  <span className="font-semibold text-white">R$ 195,00</span>
+                  <span className="font-semibold text-white">R$ 50,00</span>
                 </div>
               )}
               {![10, 15, 18, 22, 24].includes(selectedCalendarDay || 0) && (
@@ -1466,6 +1660,182 @@ export default function PlanejamentoPage() {
                 Fechar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. MODAL: DETALHES DE GASTOS DA CATEGORIA */}
+      {selectedCategoryModal && (
+        <div
+          onClick={() => setSelectedCategoryModal(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#131024] p-5 sm:p-6 shadow-2xl flex flex-col max-h-[90vh]"
+          >
+            {/* Cabeçalho do Modal */}
+            <div className="flex items-start justify-between pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    backgroundColor: `${selectedCategoryModal.color}20`,
+                    border: `1px solid ${selectedCategoryModal.color}40`,
+                  }}
+                >
+                  <Receipt size={20} style={{ color: selectedCategoryModal.color }} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: selectedCategoryModal.color }}
+                    />
+                    <h3 className="text-base sm:text-lg font-bold text-white">
+                      {selectedCategoryModal.name}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Todos os gastos desta subcategoria no mês
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedCategoryModal(null)}
+                className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Painel de Métricas Rápidas da Categoria */}
+            <div className="grid grid-cols-3 gap-3 my-4">
+              <div className="bg-[#19152B] p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">Total Gasto</span>
+                <span className="text-sm sm:text-base font-bold text-white mt-0.5 block">
+                  {formatCurrency(
+                    (categoryExpenses[selectedCategoryModal.id] || []).reduce((acc, curr) => acc + curr.amount, 0)
+                  )}
+                </span>
+              </div>
+              <div className="bg-[#19152B] p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">Lançamentos</span>
+                <span className="text-sm sm:text-base font-bold text-zinc-200 mt-0.5 block">
+                  {(categoryExpenses[selectedCategoryModal.id] || []).length} compras
+                </span>
+              </div>
+              <div className="bg-[#19152B] p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">Proporção</span>
+                <span className="text-sm sm:text-base font-bold text-[#D6B2FF] mt-0.5 block">
+                  {selectedCategoryModal.percent}% do total
+                </span>
+              </div>
+            </div>
+
+            {/* Lista com Rolagem dos Gastos */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-2 mb-4 max-h-56 sm:max-h-64">
+              {(categoryExpenses[selectedCategoryModal.id] || []).length === 0 ? (
+                <div className="text-center py-8 text-zinc-500 text-xs">
+                  Nenhum gasto registrado nesta categoria ainda.
+                </div>
+              ) : (
+                (categoryExpenses[selectedCategoryModal.id] || []).map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-[#19152B]/60 hover:bg-[#19152B] border border-white/[0.04] hover:border-white/10 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: selectedCategoryModal.color }}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-white truncate">
+                          {item.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-zinc-400">
+                          <span>{item.date}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <CreditCard size={10} className="text-zinc-500" />
+                            {item.paymentMethod}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs sm:text-sm font-semibold text-[#FF85A1]">
+                        - {formatCurrency(item.amount)}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveCategoryExpense(selectedCategoryModal.id, item.id)}
+                        title="Remover gasto"
+                        className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 rounded transition-all cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Formulário Rápido de Adição */}
+            <form
+              onSubmit={handleAddExpenseToCategory}
+              className="border-t border-white/5 pt-3 mt-auto space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1">
+                  <Plus size={12} className="text-[#D6B2FF]" />
+                  Adicionar novo gasto em {selectedCategoryModal.name}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <input
+                  type="text"
+                  placeholder="Ex: Compra na farmácia"
+                  value={newExpenseDesc}
+                  onChange={(e) => setNewExpenseDesc(e.target.value)}
+                  className="sm:col-span-5 px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                />
+                <input
+                  type="text"
+                  placeholder="R$ 0,00"
+                  value={newExpenseAmount}
+                  onChange={(e) => setNewExpenseAmount(e.target.value)}
+                  className="sm:col-span-3 px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                />
+                <select
+                  value={newExpensePaymentMethod}
+                  onChange={(e) => setNewExpensePaymentMethod(e.target.value)}
+                  className="sm:col-span-4 px-2 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white focus:outline-none focus:border-[#D6B2FF] cursor-pointer"
+                >
+                  <option value="Conta Nubank">Conta Nubank</option>
+                  <option value="Conta Inter">Conta Inter</option>
+                  <option value="Cartão Nubank">Cartão Nubank</option>
+                  <option value="Cartão C6">Cartão C6</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategoryModal(null)}
+                  className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-[#D6B2FF] text-[#0B0914] text-xs font-semibold hover:bg-[#c79efc] transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus size={13} />
+                  Adicionar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

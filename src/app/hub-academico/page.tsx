@@ -6,7 +6,7 @@ import {
   ChevronDown,
   Bell,
   UtensilsCrossed,
-  Printer,
+  Plus,
   BookOpen,
   AlertTriangle,
   ArrowRight,
@@ -65,7 +65,7 @@ export default function HubAcademicoPage() {
 
   // 3. Estados dos Serviços Universitários
   const [ruMeals, setRuMeals] = useState(12);
-  const [printQuota, setPrintQuota] = useState(18.4);
+  const [lastMealTime, setLastMealTime] = useState("Hoje, 12h48");
 
   // 4. Estados dos Empréstimos da Biblioteca
   const [borrowedBooks, setBorrowedBooks] = useState<BorrowedBook[]>([
@@ -145,6 +145,30 @@ export default function HubAcademicoPage() {
     setHasLibraryFine(false);
     setShowFinePaymentModal(false);
     showToast("Multa quitada com sucesso! Situação acadêmica regularizada.");
+  };
+
+  // Ação de Informar Refeição Utilizada
+  const handleUseMeal = () => {
+    if (ruMeals <= 0) {
+      showToast("Você não possui créditos do RU disponíveis! Faça uma recarga.");
+      setShowRuRechargeModal(true);
+      return;
+    }
+
+    const newBalance = ruMeals - 1;
+    setRuMeals(newBalance);
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    setLastMealTime(`Hoje, ${hours}h${minutes}`);
+
+    if (newBalance === 0) {
+      showToast("Refeição registrada! Seus créditos acabaram. Recarregue seu saldo.");
+    } else if (newBalance <= 2) {
+      showToast(`Refeição registrada! Atenção: restam apenas ${newBalance} refeições.`);
+    } else {
+      showToast(`Refeição registrada com sucesso! Saldo restante: ${newBalance} refeições.`);
+    }
   };
 
   // Ação de Recarga do RU
@@ -356,63 +380,56 @@ export default function HubAcademicoPage() {
         </div>
 
         {/* Card: Créditos do Restaurante Universitário (RU) */}
-        <div className="lg:col-span-3 rounded-2xl border border-white/5 bg-[#131024] p-5 sm:p-6 shadow-lg flex flex-col justify-between hover:border-white/10 transition-all">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#10E59B]/10 border border-[#10E59B]/25 text-[#4DE8B3] flex items-center justify-center">
-                <UtensilsCrossed size={20} />
+        <div className="lg:col-span-6 rounded-2xl border border-white/5 bg-[#131024] p-6 shadow-lg flex flex-col justify-between hover:border-white/10 transition-all">
+          {/* Topo do Card */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#10E59B]/10 border border-[#10E59B]/20 text-[#4DE8B3] flex items-center justify-center">
+                <UtensilsCrossed size={17} />
               </div>
-              <span className="bg-[#19152B] border border-white/5 text-[10px] font-semibold text-zinc-400 uppercase px-2.5 py-0.5 rounded-full">
-                Ativo
-              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-white">
+                  Créditos do RU
+                </h3>
+                <span className="text-[11px] text-zinc-400">Restaurante Universitário</span>
+              </div>
             </div>
 
-            <h3 className="text-xs text-zinc-400 leading-tight">
-              Créditos do Restaurante Universitário (RU)
-            </h3>
+            <button
+              type="button"
+              onClick={() => setShowRuRechargeModal(true)}
+              className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <span>Recarregar</span>
+              <ChevronRight size={13} />
+            </button>
+          </div>
 
-            <div className="flex items-baseline mt-2">
-              <span className="text-3xl font-extrabold text-white tracking-tight">
+          {/* Métrica Central e Ação de Informar Refeição */}
+          <div className="flex items-center justify-between my-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-white tracking-tight">
                 {ruMeals}
               </span>
-              <span className="text-xs text-zinc-400 font-normal ml-2">refeições</span>
+              <span className="text-xs text-zinc-400">refeições</span>
             </div>
+
+            <button
+              type="button"
+              onClick={handleUseMeal}
+              disabled={ruMeals <= 0}
+              className="px-3.5 py-2 rounded-xl bg-[#4DE8B3]/10 hover:bg-[#4DE8B3]/20 border border-[#4DE8B3]/25 text-xs font-semibold text-[#4DE8B3] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+              title="Informar que utilizou 1 refeição"
+            >
+              <UtensilsCrossed size={14} />
+              <span>Utilizei 1 refeição</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowRuRechargeModal(true)}
-            className="pt-4 border-t border-white/5 mt-4 text-[11px] text-zinc-400 hover:text-white flex items-center justify-between w-full cursor-pointer transition-colors"
-          >
-            <span>Último uso: hoje, 12h48</span>
-            <ChevronRight size={14} className="text-zinc-500" />
-          </button>
-        </div>
-
-        {/* Card: Cota de Impressão */}
-        <div className="lg:col-span-3 rounded-2xl border border-white/5 bg-[#131024] p-5 sm:p-6 shadow-lg flex flex-col justify-between hover:border-white/10 transition-all">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#9D4EDD]/15 border border-[#9D4EDD]/25 text-[#D6B2FF] flex items-center justify-center">
-                <Printer size={20} />
-              </div>
-              <span className="bg-[#19152B] border border-white/5 text-[10px] font-semibold text-zinc-400 uppercase px-2.5 py-0.5 rounded-full">
-                Mensal
-              </span>
-            </div>
-
-            <h3 className="text-xs text-zinc-400 leading-tight">Cota de Impressão</h3>
-
-            <div className="flex items-baseline mt-2">
-              <span className="text-3xl font-extrabold text-white tracking-tight">
-                {formatCurrency(printQuota)}
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-white/5 mt-4 text-[11px] text-zinc-400 flex items-center justify-between">
-            <span>Renova em 12 dias</span>
-            <ChevronRight size={14} className="text-zinc-500" />
+          {/* Rodapé Limpo */}
+          <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
+            <span>Último uso: {lastMealTime}</span>
+            <span>R$ 3,00 / refeição</span>
           </div>
         </div>
       </div>
