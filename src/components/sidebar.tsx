@@ -63,7 +63,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 h-screen bg-[#0D0B18] border-r border-white/5 flex flex-col justify-between p-5 fixed left-0 top-0 select-none z-50">
+    <aside className="hidden md:flex w-64 h-screen bg-[#0D0B18] border-r border-white/5 flex-col justify-between p-5 fixed left-0 top-0 select-none z-50">
       <div className="flex flex-col">
        {/* Logótipo e Nome */}
         <div className="flex items-center gap-3.5 px-1 mb-8 mt-1">

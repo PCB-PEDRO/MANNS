@@ -638,43 +638,58 @@ export default function VisaoGeralPage() {
   };
 
   return (
-    <div className="max-w-[1240px] mx-auto space-y-8 pb-12 select-none relative">
+    <div className="max-w-[1240px] mx-auto space-y-6 md:space-y-8 pb-6 md:pb-12 select-none relative">
       {/* TOAST FLUTUANTE DE FEEDBACK */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#1C1832] border border-[#4DE8B3]/40 text-white text-xs font-semibold shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <Sparkles size={16} className="text-[#4DE8B3]" />
+        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#1C1832] border border-[#4DE8B3]/40 text-white text-xs font-semibold shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <Sparkles size={16} className="text-[#4DE8B3] shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* CABEÇALHO SUPERIOR */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 block mb-1">
-            TERÇA-FEIRA, 19 DE NOVEMBRO
-          </span>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            Bom dia, Arthur
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Resumo financeiro e acompanhamento de metas para estudantes
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 block mb-1">
+              TERÇA-FEIRA, 19 DE NOVEMBRO
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Bom dia, Arthur
+            </h1>
+            <p className="text-xs text-zinc-400 mt-1">
+              Resumo financeiro e acompanhamento de metas para estudantes
+            </p>
+          </div>
+
+          {/* Botão de Notificações no Mobile (alinhado ao topo direito da saudação) */}
+          <div className="md:hidden relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowNotifications(!showNotifications)}
+              aria-label="Notificações"
+              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-[#131022] border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white hover:border-white/20 transition-all relative cursor-pointer"
+            >
+              <Bell size={18} />
+              <span className="w-2 h-2 rounded-full bg-[#4DE8B3] absolute top-2.5 right-2.5" />
+            </button>
+          </div>
         </div>
 
         {/* Ações do Topo */}
-        <div className="flex items-center gap-3 relative">
+        <div className="flex items-center gap-2.5 sm:gap-3 relative w-full md:w-auto">
           <button
             type="button"
             onClick={() => setShowNotifications(!showNotifications)}
             aria-label="Notificações"
-            className="w-11 h-11 rounded-xl bg-[#131022] border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white hover:border-white/20 transition-all relative cursor-pointer"
+            className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-[#131022] border border-white/10 items-center justify-center text-zinc-300 hover:text-white hover:border-white/20 transition-all relative cursor-pointer"
           >
             <Bell size={18} />
             <span className="w-2 h-2 rounded-full bg-[#4DE8B3] absolute top-2.5 right-2.5" />
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-14 w-80 rounded-2xl bg-[#161329] border border-white/10 p-4 shadow-2xl z-30 space-y-2.5">
+            <div className="fixed md:absolute left-4 right-4 md:left-auto md:right-0 top-36 md:top-14 md:w-80 rounded-2xl bg-[#161329] border border-white/10 p-4 shadow-2xl z-40 space-y-2.5">
               <div className="flex items-center justify-between pb-2 border-b border-white/5">
                 <span className="text-xs font-semibold text-white">
                   Notificações
@@ -682,9 +697,10 @@ export default function VisaoGeralPage() {
                 <button
                   type="button"
                   onClick={() => setShowNotifications(false)}
-                  className="text-zinc-400 hover:text-white"
+                  aria-label="Fechar notificações"
+                  className="min-w-[44px] min-h-[44px] -m-2 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
                 >
-                  <X size={14} />
+                  <X size={16} />
                 </button>
               </div>
               <p className="text-xs text-zinc-300 leading-relaxed">
@@ -699,18 +715,18 @@ export default function VisaoGeralPage() {
           <button
             type="button"
             onClick={() => setModalType("receita")}
-            className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-[#131022] border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.04] hover:border-white/20 transition-all cursor-pointer"
+            className="flex-1 md:flex-initial min-h-[44px] flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-[#131022] border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.04] hover:border-white/20 transition-all cursor-pointer"
           >
-            <ArrowDown size={15} className="text-zinc-300" />
+            <ArrowDown size={15} className="text-zinc-300 shrink-0" />
             <span>Adicionar Receita</span>
           </button>
 
           <button
             type="button"
             onClick={() => setModalType("despesa")}
-            className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold shadow-[0_0_25px_rgba(77,232,179,0.35)] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+            className="flex-1 md:flex-initial min-h-[44px] flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold shadow-[0_0_25px_rgba(77,232,179,0.35)] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
           >
-            <ArrowUp size={15} strokeWidth={2.5} />
+            <ArrowUp size={15} strokeWidth={2.5} className="shrink-0" />
             <span>Adicionar Despesa</span>
           </button>
         </div>
@@ -730,21 +746,21 @@ export default function VisaoGeralPage() {
 
           <button
             type="button"
-            className="flex items-center gap-1 text-xs font-medium text-[#B583FF] hover:text-[#D6B2FF] transition-colors cursor-pointer"
+            className="min-h-[44px] px-2 -mr-2 flex items-center gap-1 text-xs font-medium text-[#B583FF] hover:text-[#D6B2FF] transition-colors cursor-pointer"
           >
             <span>Ver todas</span>
             <ChevronRight size={14} />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
           {accounts.map((acc) => (
             <div
               key={acc.id}
               style={{
                 background: `radial-gradient(circle at 90% 90%, ${acc.glowColor}, transparent 60%), #131022`,
               }}
-              className="rounded-2xl border border-white/[0.07] p-6 flex flex-col justify-between min-h-[170px] hover:border-white/15 transition-all group"
+              className="rounded-2xl border border-white/[0.07] p-5 sm:p-6 flex flex-col justify-between min-h-[160px] md:min-h-[170px] hover:border-white/15 transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -762,7 +778,7 @@ export default function VisaoGeralPage() {
                 <button
                   type="button"
                   aria-label="Opções da conta"
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="min-w-[44px] min-h-[44px] -mr-2 -mt-2 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
                 >
                   <MoreHorizontal size={18} />
                 </button>
@@ -792,7 +808,7 @@ export default function VisaoGeralPage() {
       </section>
 
       {/* SEÇÃO 2: CARTÕES DE CRÉDITO (LISTA DISCRETA E MINIMALISTA, UM CARTÃO ABAIXO DO OUTRO) */}
-      <section className="rounded-2xl bg-[#131022] border border-white/[0.07] p-5 sm:p-6 space-y-4">
+      <section className="rounded-2xl bg-[#131022] border border-white/[0.07] p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2.5">
             <span className="text-xs font-bold uppercase tracking-wider text-white">
@@ -817,9 +833,9 @@ export default function VisaoGeralPage() {
             <button
               type="button"
               onClick={() => setShowNewCardModal(true)}
-              className="flex items-center gap-1 text-[11px] font-semibold text-[#D6B2FF] hover:text-white transition-colors cursor-pointer"
+              className="min-h-[44px] px-2.5 -mr-2 flex items-center gap-1 text-[11px] font-semibold text-[#D6B2FF] hover:text-white transition-colors cursor-pointer"
             >
-              <Plus size={13} />
+              <Plus size={14} />
               <span>Adicionar cartão</span>
             </button>
           </div>
@@ -919,14 +935,14 @@ export default function VisaoGeralPage() {
                 </div>
 
                 {/* 3. Ações Rápidas Discretas */}
-                <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end pt-1 md:pt-0">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedCardForAction(card.id);
                       setShowPayInvoiceModal(true);
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-[#4DE8B3]/10 hover:bg-[#4DE8B3]/20 border border-[#4DE8B3]/25 text-[11px] font-semibold text-[#4DE8B3] transition-colors cursor-pointer"
+                    className="min-h-[44px] flex-1 md:flex-initial px-4 py-2 rounded-xl bg-[#4DE8B3]/10 hover:bg-[#4DE8B3]/20 border border-[#4DE8B3]/25 text-xs font-semibold text-[#4DE8B3] transition-colors cursor-pointer flex items-center justify-center"
                   >
                     Pagar fatura
                   </button>
@@ -939,9 +955,10 @@ export default function VisaoGeralPage() {
                       setShowAdjustLimitModal(true);
                     }}
                     title="Ajustar limite"
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                    aria-label={`Ajustar limite do cartão ${card.name}`}
+                    className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
                   >
-                    <SlidersHorizontal size={14} />
+                    <SlidersHorizontal size={16} />
                   </button>
                 </div>
               </div>
@@ -953,7 +970,7 @@ export default function VisaoGeralPage() {
       {/* SEÇÃO 3: OS DOIS GRÁFICOS (RESUMO MENSAL E ORÇAMENTO RESTANTE EM 2 COLUNAS) */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* GRÁFICO 1: DESPESAS POR CATEGORIA (GRÁFICO DE ROSCA EM SVG) */}
-        <div className="rounded-2xl bg-[#131022] border border-white/[0.07] p-7 flex flex-col justify-between hover:border-white/15 transition-all">
+        <div className="rounded-2xl bg-[#131022] border border-white/[0.07] p-5 sm:p-7 flex flex-col justify-between hover:border-white/15 transition-all">
           <div className="flex items-start justify-between mb-6">
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 block mb-1">
@@ -968,14 +985,14 @@ export default function VisaoGeralPage() {
               <button
                 type="button"
                 onClick={() => setIsMonthOpen(!isMonthOpen)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#19152B] border border-white/10 text-xs text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                className="min-h-[44px] flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#19152B] border border-white/10 text-xs text-zinc-300 hover:text-white transition-colors cursor-pointer"
               >
                 <span>{selectedMonth}</span>
                 <ChevronDown size={14} className="text-zinc-400" />
               </button>
 
               {isMonthOpen && (
-                <div className="absolute right-0 mt-2 w-36 rounded-xl bg-[#19152B] border border-white/10 py-1 shadow-xl z-20">
+                <div className="absolute right-0 mt-2 w-40 rounded-xl bg-[#19152B] border border-white/10 py-1.5 shadow-xl z-20">
                   {["Outubro", "Novembro", "Dezembro"].map((mes) => (
                     <button
                       key={mes}
@@ -984,7 +1001,7 @@ export default function VisaoGeralPage() {
                         setSelectedMonth(mes);
                         setIsMonthOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-xs transition-colors ${
+                      className={`w-full min-h-[44px] flex items-center text-left px-4 py-2 text-xs transition-colors cursor-pointer ${
                         selectedMonth === mes
                           ? "text-[#4DE8B3] font-semibold bg-white/5"
                           : "text-zinc-300 hover:bg-white/5"
@@ -999,7 +1016,7 @@ export default function VisaoGeralPage() {
           </div>
 
           {/* Donut Chart lado a lado com a Lista de Categorias */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-8 my-auto py-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 my-auto py-2">
             <div className="relative w-48 h-48 flex items-center justify-center shrink-0">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
                 <circle
@@ -1069,7 +1086,7 @@ export default function VisaoGeralPage() {
                     onMouseEnter={() => setHoveredCategory(cat)}
                     onMouseLeave={() => setHoveredCategory(null)}
                     onClick={() => setSelectedCategoryModal(cat)}
-                    className="flex items-center justify-between py-3.5 px-2.5 rounded-xl hover:bg-white/[0.04] transition-all cursor-pointer group"
+                    className="min-h-[44px] flex items-center justify-between py-3 px-2.5 rounded-xl hover:bg-white/[0.04] transition-all cursor-pointer group"
                     title={`Clique para ver todos os gastos de ${cat.name}`}
                     style={{
                       opacity: hoveredCategory && !isHovered ? 0.4 : 1,
@@ -1110,7 +1127,7 @@ export default function VisaoGeralPage() {
         </div>
 
         {/* GRÁFICO 2: ORÇAMENTO RESTANTE (BARRAS DE PROGRESSO) */}
-        <div className="rounded-2xl bg-[#131022] border border-white/[0.07] p-7 flex flex-col justify-between hover:border-white/15 transition-all">
+        <div className="rounded-2xl bg-[#131022] border border-white/[0.07] p-5 sm:p-7 flex flex-col justify-between hover:border-white/15 transition-all">
           <div className="mb-6">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 block mb-1">
               CONTROLE SEUS GASTOS
@@ -1198,8 +1215,17 @@ export default function VisaoGeralPage() {
 
       {/* MODAL 1: ADICIONAR RECEITA OU DESPESA */}
       {modalType && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setModalType(null)}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+          >
+            {/* Pílula visual do Bottom Sheet no Mobile */}
+            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
+
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white">
                 {modalType === "receita"
@@ -1209,7 +1235,8 @@ export default function VisaoGeralPage() {
               <button
                 type="button"
                 onClick={() => setModalType(null)}
-                className="text-zinc-400 hover:text-white"
+                aria-label="Fechar modal"
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1227,7 +1254,7 @@ export default function VisaoGeralPage() {
                   placeholder="Ex: 150.00"
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
-                  className="w-full rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                  className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                 />
               </div>
 
@@ -1238,7 +1265,7 @@ export default function VisaoGeralPage() {
                 <select
                   value={selectedAccountId}
                   onChange={(e) => setSelectedAccountId(e.target.value)}
-                  className="w-full rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                  className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                 >
                   <optgroup label="Contas Bancárias">
                     {accounts.map((acc) => (
@@ -1267,7 +1294,7 @@ export default function VisaoGeralPage() {
                   <select
                     value={selectedCategoryId}
                     onChange={(e) => setSelectedCategoryId(e.target.value)}
-                    className="w-full rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                    className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                   >
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
@@ -1282,13 +1309,13 @@ export default function VisaoGeralPage() {
                 <button
                   type="button"
                   onClick={() => setModalType(null)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white"
+                  className="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                  className="min-h-[44px] flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
                 >
                   <Plus size={14} strokeWidth={2.5} />
                   <span>Confirmar</span>
@@ -1301,8 +1328,16 @@ export default function VisaoGeralPage() {
 
       {/* MODAL 2: PAGAR FATURA DO CARTÃO */}
       {showPayInvoiceModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setShowPayInvoiceModal(false)}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+          >
+            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div
@@ -1326,7 +1361,8 @@ export default function VisaoGeralPage() {
               <button
                 type="button"
                 onClick={() => setShowPayInvoiceModal(false)}
-                className="text-zinc-400 hover:text-white"
+                aria-label="Fechar modal"
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1355,7 +1391,7 @@ export default function VisaoGeralPage() {
                   <button
                     type="button"
                     onClick={() => setPayAmountType("total")}
-                    className={`p-3 rounded-xl border text-xs font-medium text-left transition-all ${
+                    className={`min-h-[44px] p-3 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer ${
                       payAmountType === "total"
                         ? "border-[#4DE8B3] bg-[#4DE8B3]/10 text-white"
                         : "border-white/10 bg-[#0D0B18] text-zinc-400 hover:text-white"
@@ -1370,7 +1406,7 @@ export default function VisaoGeralPage() {
                   <button
                     type="button"
                     onClick={() => setPayAmountType("custom")}
-                    className={`p-3 rounded-xl border text-xs font-medium text-left transition-all ${
+                    className={`min-h-[44px] p-3 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer ${
                       payAmountType === "custom"
                         ? "border-[#4DE8B3] bg-[#4DE8B3]/10 text-white"
                         : "border-white/10 bg-[#0D0B18] text-zinc-400 hover:text-white"
@@ -1397,7 +1433,7 @@ export default function VisaoGeralPage() {
                     value={customPayAmount}
                     onChange={(e) => setCustomPayAmount(e.target.value)}
                     max={activeCardForModal.usedLimit}
-                    className="w-full rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                    className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                   />
                 </div>
               )}
@@ -1409,7 +1445,7 @@ export default function VisaoGeralPage() {
                 <select
                   value={payingAccount}
                   onChange={(e) => setPayingAccount(e.target.value)}
-                  className="w-full rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                  className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                 >
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -1423,14 +1459,14 @@ export default function VisaoGeralPage() {
                 <button
                   type="button"
                   onClick={() => setShowPayInvoiceModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white"
+                  className="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={activeCardForModal.usedLimit === 0}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  className="min-h-[44px] flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   <CheckCircle2 size={14} />
                   <span>Confirmar Pagamento</span>
@@ -1443,8 +1479,16 @@ export default function VisaoGeralPage() {
 
       {/* MODAL 3: AJUSTAR LIMITE DO CARTÃO */}
       {showAdjustLimitModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setShowAdjustLimitModal(false)}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+          >
+            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div
@@ -1468,7 +1512,8 @@ export default function VisaoGeralPage() {
               <button
                 type="button"
                 onClick={() => setShowAdjustLimitModal(false)}
-                className="text-zinc-400 hover:text-white"
+                aria-label="Fechar modal"
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1500,7 +1545,7 @@ export default function VisaoGeralPage() {
                 step="50"
                 value={tempLimit}
                 onChange={(e) => setTempLimit(Number(e.target.value))}
-                className="w-full accent-[#4DE8B3] cursor-pointer"
+                className="w-full h-6 accent-[#4DE8B3] cursor-pointer"
               />
               <span className="text-[11px] text-zinc-500 block text-center">
                 Recomendado para perfil universitário com renda de R$ 1.850
@@ -1511,14 +1556,14 @@ export default function VisaoGeralPage() {
               <button
                 type="button"
                 onClick={() => setShowAdjustLimitModal(false)}
-                className="px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleSaveLimit}
-                className="px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
               >
                 Salvar Novo Limite
               </button>
@@ -1529,8 +1574,16 @@ export default function VisaoGeralPage() {
 
       {/* MODAL 4: ADICIONAR NOVO CARTÃO */}
       {showNewCardModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setShowNewCardModal(false)}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+          >
+            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
+
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white">
                 Adicionar Cartão de Crédito
@@ -1538,7 +1591,8 @@ export default function VisaoGeralPage() {
               <button
                 type="button"
                 onClick={() => setShowNewCardModal(false)}
-                className="text-zinc-400 hover:text-white"
+                aria-label="Fechar modal"
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1555,7 +1609,7 @@ export default function VisaoGeralPage() {
                   placeholder="Ex: Inter Gold, Caixa Universitário..."
                   value={newCardName}
                   onChange={(e) => setNewCardName(e.target.value)}
-                  className="w-full rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                  className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                 />
               </div>
 
@@ -1570,7 +1624,7 @@ export default function VisaoGeralPage() {
                   placeholder="Ex: 800.00"
                   value={newCardLimit}
                   onChange={(e) => setNewCardLimit(e.target.value)}
-                  className="w-full rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                  className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                 />
               </div>
 
@@ -1578,13 +1632,13 @@ export default function VisaoGeralPage() {
                 <button
                   type="button"
                   onClick={() => setShowNewCardModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white"
+                  className="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                  className="min-h-[44px] flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
                 >
                   <Plus size={14} strokeWidth={2.5} />
                   <span>Cadastrar Cartão</span>
@@ -1599,12 +1653,14 @@ export default function VisaoGeralPage() {
       {selectedCategoryModal && (
         <div
           onClick={() => setSelectedCategoryModal(null)}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#131024] p-5 sm:p-6 shadow-2xl flex flex-col max-h-[90vh]"
+            className="relative w-full max-w-lg rounded-t-3xl md:rounded-2xl border-t md:border border-white/10 bg-[#131024] p-5 sm:p-6 pb-8 md:pb-6 shadow-2xl flex flex-col max-h-[90vh]"
           >
+            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-3 md:hidden shrink-0" />
+
             {/* Cabeçalho do Modal */}
             <div className="flex items-start justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
@@ -1635,7 +1691,7 @@ export default function VisaoGeralPage() {
               <button
                 type="button"
                 onClick={() => setSelectedCategoryModal(null)}
-                className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] -mr-2 -mt-1 flex items-center justify-center text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
                 aria-label="Fechar"
               >
                 <X size={18} />
@@ -1702,7 +1758,7 @@ export default function VisaoGeralPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs sm:text-sm font-semibold text-[#FF85A1]">
                         - {formatCurrency(item.amount)}
                       </span>
@@ -1710,9 +1766,10 @@ export default function VisaoGeralPage() {
                         type="button"
                         onClick={() => handleRemoveCategoryExpense(selectedCategoryModal.id, item.id)}
                         title="Remover gasto"
-                        className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 rounded transition-all cursor-pointer"
+                        aria-label={`Remover gasto ${item.description}`}
+                        className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 text-zinc-500 hover:text-red-400 rounded-lg transition-all cursor-pointer"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
@@ -1723,7 +1780,7 @@ export default function VisaoGeralPage() {
             {/* Formulário Rápido de Adição */}
             <form
               onSubmit={handleAddExpenseToCategory}
-              className="border-t border-white/5 pt-3 mt-auto space-y-2"
+              className="border-t border-white/5 pt-3 mt-auto space-y-2.5"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1">
@@ -1737,19 +1794,19 @@ export default function VisaoGeralPage() {
                   placeholder="Ex: Compra na farmácia"
                   value={newCatExpenseDesc}
                   onChange={(e) => setNewCatExpenseDesc(e.target.value)}
-                  className="sm:col-span-5 px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#4DE8B3]"
+                  className="sm:col-span-5 min-h-[44px] px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#4DE8B3]"
                 />
                 <input
                   type="text"
                   placeholder="R$ 0,00"
                   value={newCatExpenseAmount}
                   onChange={(e) => setNewCatExpenseAmount(e.target.value)}
-                  className="sm:col-span-3 px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#4DE8B3]"
+                  className="sm:col-span-3 min-h-[44px] px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#4DE8B3]"
                 />
                 <select
                   value={newCatExpensePaymentMethod}
                   onChange={(e) => setNewCatExpensePaymentMethod(e.target.value)}
-                  className="sm:col-span-4 px-2 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white focus:outline-none focus:border-[#4DE8B3] cursor-pointer"
+                  className="sm:col-span-4 min-h-[44px] px-2 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white focus:outline-none focus:border-[#4DE8B3] cursor-pointer"
                 >
                   <option value="Conta Nubank">Conta Nubank</option>
                   <option value="Conta Inter">Conta Inter</option>
@@ -1762,15 +1819,15 @@ export default function VisaoGeralPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedCategoryModal(null)}
-                  className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-4 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   Fechar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-semibold hover:brightness-110 transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="min-h-[44px] px-4 py-2 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-semibold hover:brightness-110 transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <Plus size={13} strokeWidth={2.5} />
+                  <Plus size={14} strokeWidth={2.5} />
                   Adicionar
                 </button>
               </div>
