@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "@/components/theme-provider";
 import {
   User,
   Settings2,
@@ -24,6 +25,8 @@ import {
   ChevronRight,
   Sliders,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 // Tipos e Interfaces
@@ -38,6 +41,8 @@ interface BankConnection {
 }
 
 export default function ConfiguracoesPage() {
+  const { theme, setTheme } = useTheme();
+
   // 1. Navegação de Abas
   const [activeTab, setActiveTab] = useState<
     "perfil" | "preferencias" | "notificacoes" | "conexoes" | "seguranca"
@@ -403,6 +408,123 @@ export default function ConfiguracoesPage() {
       {/* ABA 2: PREFERÊNCIAS DA APLICAÇÃO */}
       {activeTab === "preferencias" && (
         <div className="space-y-5 animate-fadeIn">
+          {/* SELEÇÃO DE TEMA (ESCURO / CLARO) */}
+          <div className="rounded-2xl border border-white/5 bg-[#131024] p-6 shadow-lg space-y-5">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#D6B2FF] bg-[#D6B2FF]/10 px-2.5 py-0.5 rounded-md border border-[#D6B2FF]/20">
+                  Aparência
+                </span>
+              </div>
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Tema da Interface
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Escolha o tema que melhor se adapta ao seu estilo e ambiente de estudo
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Opção Tema Escuro */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme("dark");
+                  showToast("Tema escuro ativado com sucesso!");
+                }}
+                className={`relative p-5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between gap-4 min-h-[44px] ${
+                  theme === "dark"
+                    ? "bg-[#1C1832] border-[#D6B2FF] shadow-[0_0_15px_rgba(214,178,255,0.15)] ring-1 ring-[#D6B2FF]/40"
+                    : "bg-[#19152B] border-white/5 hover:border-white/20"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-[#0B0914] border border-white/10 flex items-center justify-center text-[#D6B2FF] shadow-sm">
+                    <Moon size={20} />
+                  </div>
+                  {theme === "dark" ? (
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-[#4DE8B3] bg-[#4DE8B3]/10 border border-[#4DE8B3]/25 px-2.5 py-1 rounded-full">
+                      <Check size={12} strokeWidth={3} />
+                      Ativo
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-zinc-400 border border-white/10 px-2.5 py-1 rounded-full">
+                      Selecionar
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-white">Tema Escuro</h4>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Fundo escuro profundo com realces neon e contraste suave. Ideal para noites de estudo e economia de bateria.
+                  </p>
+                </div>
+
+                {/* Pré-visualização miniatura Dark */}
+                <div className="w-full h-11 rounded-lg bg-[#0B0914] border border-white/10 p-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#4DE8B3]" />
+                    <div className="w-12 h-2 rounded bg-white/20" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-8 h-2 rounded bg-[#D6B2FF]/50" />
+                    <div className="w-4 h-2 rounded bg-[#00E5FF]/50" />
+                  </div>
+                </div>
+              </button>
+
+              {/* Opção Tema Claro */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme("light");
+                  showToast("Tema claro ativado com sucesso!");
+                }}
+                className={`relative p-5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between gap-4 min-h-[44px] ${
+                  theme === "light"
+                    ? "bg-[#1C1832] border-[#D6B2FF] shadow-[0_0_15px_rgba(214,178,255,0.15)] ring-1 ring-[#D6B2FF]/40"
+                    : "bg-[#19152B] border-white/5 hover:border-white/20"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-sm">
+                    <Sun size={20} />
+                  </div>
+                  {theme === "light" ? (
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-[#4DE8B3] bg-[#4DE8B3]/10 border border-[#4DE8B3]/25 px-2.5 py-1 rounded-full">
+                      <Check size={12} strokeWidth={3} />
+                      Ativo
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-zinc-400 border border-white/10 px-2.5 py-1 rounded-full">
+                      Selecionar
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-white">Tema Claro</h4>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Visual limpo, arejado e de alto contraste. Recomendado para leitura prolongada durante o dia e ambientes claros.
+                  </p>
+                </div>
+
+                {/* Pré-visualização miniatura Light */}
+                <div className="w-full h-11 rounded-lg bg-[#F8FAFC] border border-slate-300/60 p-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#059669]" />
+                    <div className="w-12 h-2 rounded bg-slate-300" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-8 h-2 rounded bg-[#7C3AED]/40" />
+                    <div className="w-4 h-2 rounded bg-[#0284C7]/40" />
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-white/5 bg-[#131024] p-6 shadow-lg space-y-6">
             <div>
               <h3 className="text-base font-bold text-white tracking-tight">

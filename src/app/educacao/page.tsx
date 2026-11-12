@@ -76,6 +76,7 @@ export default function EducacaoPage() {
   // 4. Modais
   const [readingArticle, setReadingArticle] = useState<AcademicArticle | null>(null);
   const [activeStory, setActiveStory] = useState<QuickStory | null>(null);
+  const [showAllStoriesModal, setShowAllStoriesModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -382,9 +383,9 @@ export default function EducacaoPage() {
           </p>
         </div>
 
-        {/* Busca e Notificações */}
-        <div className="flex items-center gap-3 relative">
-          <div className="relative">
+        {/* Busca e Notificações (Alinhado à Direita no Mobile) */}
+        <div className="flex items-center justify-between md:justify-end gap-3 relative w-full md:w-auto">
+          <div className="relative flex-1 md:flex-initial">
             <Search
               size={16}
               className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
@@ -394,7 +395,7 @@ export default function EducacaoPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar conteúdo..."
-              className="bg-[#131024] border border-white/10 rounded-xl pl-9 pr-14 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#A8F45D] transition-colors w-52 sm:w-64"
+              className="bg-[#131024] border border-white/10 rounded-xl pl-9 pr-14 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#A8F45D] transition-colors w-full md:w-64"
             />
             <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-400 bg-[#19152B] border border-white/10 px-1.5 py-0.5 rounded">
               ⌘ K
@@ -402,7 +403,7 @@ export default function EducacaoPage() {
           </div>
 
           {/* Botão de Notificações */}
-          <div className="relative">
+          <div className="relative ml-auto md:ml-0 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -420,33 +421,41 @@ export default function EducacaoPage() {
 
             {/* Popover de Avisos */}
             {showNotifications && (
-              <div className="absolute right-0 top-13 w-80 bg-[#131024] border border-white/10 rounded-2xl p-4 shadow-2xl z-40 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                  <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-                    Atualizações Acadêmicas
-                  </h3>
-                  <button
-                    onClick={() => setShowNotifications(false)}
-                    className="text-zinc-500 hover:text-white"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <div className="p-2.5 rounded-xl bg-[#19152B] border border-white/5 space-y-1">
-                    <span className="text-xs font-semibold text-[#A8F45D]">Novo Paper da FEA-USP</span>
-                    <p className="text-[11px] text-zinc-300">
-                      Estudo empírico sobre microeconomias em repúblicas universitárias adicionado ao feed.
-                    </p>
+              <>
+                {/* Backdrop escuro transparente no mobile para fechar ao clicar fora */}
+                <div
+                  className="fixed inset-0 z-40 md:hidden bg-black/40 backdrop-blur-[2px]"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <div className="fixed md:absolute left-4 right-4 md:left-auto md:right-0 top-36 md:top-13 md:w-80 bg-[#131024] border border-white/10 rounded-2xl p-4 shadow-2xl z-50 space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                    <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                      Atualizações Acadêmicas
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowNotifications(false)}
+                      className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#19152B] border border-white/5 space-y-1">
-                    <span className="text-xs font-semibold text-[#D6B2FF]">Desafio do Mês</span>
-                    <p className="text-[11px] text-zinc-300">
-                      Meta de Zero Delivery por 10 dias está com 480 alunos inscritos.
-                    </p>
+                  <div className="space-y-2">
+                    <div className="p-2.5 rounded-xl bg-[#19152B] border border-white/5 space-y-1">
+                      <span className="text-xs font-semibold text-[#A8F45D]">Novo Paper da FEA-USP</span>
+                      <p className="text-[11px] text-zinc-300">
+                        Estudo empírico sobre microeconomias em repúblicas universitárias adicionado ao feed.
+                      </p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-[#19152B] border border-white/5 space-y-1">
+                      <span className="text-xs font-semibold text-[#D6B2FF]">Desafio do Mês</span>
+                      <p className="text-[11px] text-zinc-300">
+                        Meta de Zero Delivery por 10 dias está com 480 alunos inscritos.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -463,12 +472,8 @@ export default function EducacaoPage() {
           </div>
           <button
             type="button"
-            onClick={() => {
-              setSelectedCategory(null);
-              setSelectedTab("todos");
-              showToast("Exibindo todas as dicas rápidas.");
-            }}
-            className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+            onClick={() => setShowAllStoriesModal(true)}
+            className="min-h-[44px] px-2 text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
           >
             <span>Ver todas</span>
             <ChevronRight size={14} />
@@ -861,6 +866,98 @@ export default function EducacaoPage() {
                 className="px-4 py-2 rounded-xl bg-[#A8F45D] text-[#0B0914] font-bold text-xs transition-colors cursor-pointer"
               >
                 Entendi!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. MODAL: TODAS AS DICAS RÁPIDAS (TELA COMPLETA) */}
+      {showAllStoriesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-2xl bg-[#131024] border border-white/10 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Topo do Modal */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#A8F45D]/15 text-[#A8F45D] flex items-center justify-center shrink-0">
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white tracking-tight">
+                    Todas as Dicas Rápidas
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Guia prático de micro-aprendizados financeiros em 60 segundos
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAllStoriesModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Grid com todas as 7 dicas rápidas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {quickStories.map((story) => (
+                <div
+                  key={story.id}
+                  onClick={() => {
+                    setShowAllStoriesModal(false);
+                    setActiveStory(story);
+                  }}
+                  className="p-4 rounded-xl bg-[#19152B] hover:bg-[#201b38] border border-white/5 hover:border-white/15 transition-all cursor-pointer space-y-3 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${story.color}20` }}
+                      >
+                        {story.icon === "zap" && <Zap size={18} style={{ color: story.color }} />}
+                        {story.icon === "chart" && <BarChart3 size={18} style={{ color: story.color }} />}
+                        {story.icon === "shield" && <ShieldCheck size={18} style={{ color: story.color }} />}
+                        {story.icon === "cap" && <GraduationCap size={18} style={{ color: story.color }} />}
+                        {story.icon === "card" && <CreditCard size={18} style={{ color: story.color }} />}
+                        {story.icon === "trending" && <TrendingUp size={18} style={{ color: story.color }} />}
+                        {story.icon === "coins" && <Coins size={18} style={{ color: story.color }} />}
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-white group-hover:text-[#A8F45D] transition-colors">
+                          {story.title}
+                        </h4>
+                        <span className="text-[10px] text-zinc-400 block">{story.subtitle}</span>
+                      </div>
+                    </div>
+
+                    <span className="text-[10px] font-semibold text-zinc-500 group-hover:text-white flex items-center gap-0.5">
+                      <span>Ler</span>
+                      <ChevronRight size={12} />
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-zinc-300 leading-relaxed line-clamp-3">
+                    {story.insight}
+                  </p>
+
+                  <div className="pt-2 border-t border-white/5 flex items-center gap-1.5 text-[11px] text-zinc-400">
+                    <span className="font-semibold text-[#A8F45D] shrink-0">Ação:</span>
+                    <span className="truncate">{story.action}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-white/5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAllStoriesModal(false)}
+                className="min-h-[44px] px-5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              >
+                Fechar
               </button>
             </div>
           </div>

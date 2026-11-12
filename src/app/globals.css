@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@import "tailwindcss";
-
 @theme {
   --color-manns-bg: #0B0914;
   --color-manns-panel: #12101E;
@@ -9,4 +7,244 @@
   --color-manns-cyan: #43CFE3;
   --color-manns-green: #4DE8B3;
   --color-manns-purple: #A78BFA;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+/* Barra de rolagem escura e elegante */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+/* ==========================================================================
+   TEMA CLARO (LIGHT THEME) - MANNS
+   ========================================================================== */
+html.light {
+  color-scheme: light;
+}
+
+html.light body {
+  background-color: #F4F6FB !important;
+  color: #0F172A !important;
+}
+
+/* Fundo Geral da Aplicação */
+html.light [class*="bg-[#0B0914]"] {
+  background-color: #F4F6FB !important;
+}
+
+/* Sidebar e Menus Laterais / Cabeçalhos Fixos */
+html.light aside,
+html.light [class*="bg-[#0D0B18]"],
+html.light [class*="bg-[#0E0C18]"] {
+  background-color: #FFFFFF !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light header.md\:hidden {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light nav.md\:hidden {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Cards Principais, Painéis e Modais */
+html.light [data-account-card],
+html.light .account-card,
+html.light [class*="bg-[#120F20]"],
+html.light [class*="bg-[#131022]"],
+html.light [class*="bg-[#131024]"],
+html.light [class*="bg-[#151226]"],
+html.light [class*="bg-[#161328]"],
+html.light [class*="bg-[#161329]"],
+html.light [class*="bg-[#18142A]"],
+html.light [class*="bg-[#1A162B]"],
+html.light [class*="bg-[#1C1733]"],
+html.light [class*="bg-[#1C1832]"],
+html.light [class*="bg-[#1C1833]"] {
+  background-color: #FFFFFF !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Containers Secundários, Linhas de Tabelas e Caixas Internas */
+html.light [class*="bg-[#19152B]"],
+html.light [class*="bg-[#1E1736]"],
+html.light [class*="bg-[#1e1933]"],
+html.light [class*="bg-[#1E1938]"],
+html.light [class*="bg-[#1E1A34]"],
+html.light [class*="bg-[#1f1a36]"],
+html.light [class*="bg-[#201b38]"],
+html.light [class*="bg-[#231D40]"],
+html.light [class*="bg-[#2A2345]"] {
+  background-color: #F8FAFC !important;
+}
+
+/* Inputs, Textareas e Campos de Seleção */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light select,
+html.light textarea {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  background-color: #FFFFFF !important;
+  border-color: #7C3AED !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+html.light select option {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+/* Bordas e Divisores Escuros Convertidos para Cinza Suave */
+html.light [class*="border-white/"],
+html.light [class*="border-white\/\\["],
+html.light [class*="divide-white/"],
+html.light [class*="divide-white\/\\["] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Elementos Translúcidos Escuros */
+html.light [class*="bg-white\/[0.0"],
+html.light [class*="bg-white\/5"],
+html.light [class*="bg-white\/10"] {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light [class*="hover:bg-white\/[0.0"]:hover,
+html.light [class*="hover:bg-white\/5"]:hover,
+html.light [class*="hover:bg-white\/10"]:hover {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Tipografia Geral */
+html.light [class*="text-white"] {
+  color: #0F172A !important;
+}
+
+html.light [class*="text-zinc-200"] {
+  color: #334155 !important;
+}
+
+html.light [class*="text-zinc-300"] {
+  color: #475569 !important;
+}
+
+html.light [class*="text-zinc-400"] {
+  color: #64748B !important;
+}
+
+html.light [class*="text-zinc-500"] {
+  color: #94A3B8 !important;
+}
+
+/* Exceções: Manter Texto Claro em Botões Escuros, Gradientes e Badges com Fundo Escuro */
+html.light button[class*="bg-black"] [class*="text-white"],
+html.light [class*="bg-black"] [class*="text-white"],
+html.light [class*="bg-[#7B2CBF]"] [class*="text-white"],
+html.light [class*="bg-[#9D4EDD]"] [class*="text-white"],
+html.light [class*="bg-[#8338EC]"] [class*="text-white"],
+html.light [class*="bg-gradient"] [class*="text-white"],
+html.light [class*="from-"] [class*="text-white"],
+html.light [class*="text-white"][class*="bg-[#7B2CBF]"],
+html.light [class*="text-white"][class*="bg-[#9D4EDD]"],
+html.light [class*="text-white"][class*="bg-[#8338EC]"],
+html.light [class*="text-white"][class*="bg-black"],
+html.light [class*="text-white"][class*="bg-gradient"] {
+  color: #FFFFFF !important;
+}
+
+/* Botões com texto escuro proposital em badges claros */
+html.light button[class*="bg-[#D6B2FF]"],
+html.light [class*="bg-[#D6B2FF]"] {
+  color: #2E1065 !important;
+}
+
+html.light button[class*="bg-[#4DE8B3]"],
+html.light [class*="bg-[#4DE8B3]"] {
+  color: #064E3B !important;
+}
+
+/* Ajustes de Legibilidade de Acentos Neon no Fundo Claro */
+html.light [class*="text-[#4DE8B3]"] {
+  color: #059669 !important;
+}
+
+html.light [class*="text-[#10E59B]"] {
+  color: #059669 !important;
+}
+
+html.light [class*="text-[#00E5FF]"] {
+  color: #0284C7 !important;
+}
+
+html.light [class*="text-[#FFD166]"] {
+  color: #D97706 !important;
+}
+
+html.light [class*="text-[#A8F45D]"] {
+  color: #4D7C0F !important;
+}
+
+html.light [class*="text-[#D6B2FF]"] {
+  color: #7C3AED !important;
+}
+
+html.light [class*="text-[#FF85A1]"] {
+  color: #E11D48 !important;
+}
+
+/* Mantém o Backdrop Escuro Translúcido dos Modais */
+html.light [class*="bg-black/60"],
+html.light [class*="bg-black/70"],
+html.light [class*="bg-black/75"],
+html.light [class*="bg-black/80"],
+html.light [class*="bg-black/90"] {
+  background-color: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Barra de rolagem no Tema Claro */
+html.light ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.3);
+}
+
+html.light * {
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
 }

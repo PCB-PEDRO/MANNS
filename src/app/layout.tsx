@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import AppLayout from "@/components/app-layout";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "MANNS | Gestão Financeira Universitária",
@@ -15,10 +16,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body 
-        className="bg-[#0B0914] text-white min-h-screen flex flex-col md:flex-row antialiased"
+        className="bg-[#0B0914] text-white min-h-screen flex flex-col md:flex-row antialiased transition-colors duration-200"
         suppressHydrationWarning
       >
-        <AppLayout>{children}</AppLayout>
+        <ThemeProvider>
+          <AppLayout>{children}</AppLayout>
+        </ThemeProvider>
       </body>
     </html>
   );

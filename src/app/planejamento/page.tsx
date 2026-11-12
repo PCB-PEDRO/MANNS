@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   Search,
   Bell,
@@ -20,6 +20,8 @@ import {
   FileSpreadsheet,
   Trash2,
   ChevronRight,
+  ChevronLeft,
+  Target,
   Receipt,
   CreditCard,
 } from "lucide-react";
@@ -57,6 +59,7 @@ interface ForecastItem {
   category: string;
   dueDate: string;
   amount: number;
+  type: "income" | "expense";
   status: "Confirmado" | "Estimado";
   dotColor: string;
 }
@@ -133,6 +136,52 @@ export default function PlanejamentoPage() {
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDueDay, setExpenseDueDay] = useState("Dia 10");
 
+  // Modal de Receita / Despesa Fixa (Versão Mobile)
+  const [fixedModalType, setFixedModalType] = useState<"income" | "expense" | null>(null);
+
+  // Carrossel Mobile de Transações do Mês vs Previsão do Próximo Mês
+  const [activeTxSlide, setActiveTxSlide] = useState<number>(0);
+  const txCarouselRef = useRef<HTMLDivElement | null>(null);
+
+  const handleTxCarouselScroll = () => {
+    if (!txCarouselRef.current) return;
+    const { scrollLeft, clientWidth } = txCarouselRef.current;
+    const idx = Math.round(scrollLeft / (clientWidth * 0.85));
+    setActiveTxSlide(Math.min(1, Math.max(0, idx)));
+  };
+
+  const scrollToTxSlide = (index: number) => {
+    if (!txCarouselRef.current) return;
+    const cardWidth = txCarouselRef.current.clientWidth * 0.9;
+    txCarouselRef.current.scrollTo({
+      left: index * cardWidth,
+      behavior: "smooth",
+    });
+    setActiveTxSlide(index);
+  };
+
+  // Carrossel de Metas Individuais (Barras Horizontais)
+  const [activeMetaIndex, setActiveMetaIndex] = useState<number>(0);
+  const metaCarouselRef = useRef<HTMLDivElement | null>(null);
+
+  const handleMetaCarouselScroll = () => {
+    if (!metaCarouselRef.current) return;
+    const { scrollLeft, clientWidth } = metaCarouselRef.current;
+    if (clientWidth === 0) return;
+    const idx = Math.round(scrollLeft / clientWidth);
+    setActiveMetaIndex(Math.min(evolutionData.length - 1, Math.max(0, idx)));
+  };
+
+  const scrollToMeta = (index: number) => {
+    if (!metaCarouselRef.current) return;
+    const width = metaCarouselRef.current.clientWidth;
+    metaCarouselRef.current.scrollTo({
+      left: index * width,
+      behavior: "smooth",
+    });
+    setActiveMetaIndex(index);
+  };
+
   // Feedback Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -147,10 +196,10 @@ export default function PlanejamentoPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([
     {
       id: "tx-1",
-      title: "Supermercado & Feira",
-      category: "Alimentação",
-      date: "18 nov.",
-      amount: -146.32,
+      title: "Quarto em república",
+      category: "Moradia",
+      date: "10 nov.",
+      amount: -680.0,
       type: "expense",
       color: "#FF85A1",
     },
@@ -165,10 +214,10 @@ export default function PlanejamentoPage() {
     },
     {
       id: "tx-3",
-      title: "Quarto em república",
-      category: "Moradia",
-      date: "10 nov.",
-      amount: -680.0,
+      title: "Supermercado & Feira",
+      category: "Alimentação",
+      date: "18 nov.",
+      amount: -385.0,
       type: "expense",
       color: "#FF85A1",
     },
@@ -177,25 +226,43 @@ export default function PlanejamentoPage() {
       title: "Auxílio permanência",
       category: "Receita fixa",
       date: "08 nov.",
-      amount: 650.0,
+      amount: 450.0,
       type: "income",
       color: "#4DE8B3",
     },
     {
       id: "tx-5",
-      title: "Xerox e livros acadêmicos",
+      title: "Monitoria acadêmica",
+      category: "Bolsa campus",
+      date: "05 nov.",
+      amount: 200.0,
+      type: "income",
+      color: "#4DE8B3",
+    },
+    {
+      id: "tx-6",
+      title: "Xerox e livros",
       category: "Estudos",
       date: "05 nov.",
-      amount: -68.5,
+      amount: -180.0,
       type: "expense",
       color: "#FF85A1",
     },
     {
-      id: "tx-6",
-      title: "Restaurante Universitário",
-      category: "Alimentação",
+      id: "tx-7",
+      title: "Passe estudantil",
+      category: "Transporte",
+      date: "03 nov.",
+      amount: -130.0,
+      type: "expense",
+      color: "#FF85A1",
+    },
+    {
+      id: "tx-8",
+      title: "Lazer universitário",
+      category: "Lazer",
       date: "02 nov.",
-      amount: -42.0,
+      amount: -105.0,
       type: "expense",
       color: "#FF85A1",
     },
@@ -209,8 +276,9 @@ export default function PlanejamentoPage() {
       category: "Moradia",
       dueDate: "10 dez.",
       amount: 680.0,
+      type: "expense",
       status: "Confirmado",
-      dotColor: "#9D4EDD",
+      dotColor: "#FF85A1",
     },
     {
       id: "fc-2",
@@ -218,35 +286,69 @@ export default function PlanejamentoPage() {
       category: "Receita fixa",
       dueDate: "15 dez.",
       amount: 1200.0,
+      type: "income",
       status: "Confirmado",
-      dotColor: "#00E5FF",
+      dotColor: "#4DE8B3",
     },
     {
       id: "fc-3",
-      title: "Rateio internet da república",
-      category: "Serviços",
-      dueDate: "18 dez.",
-      amount: 65.0,
+      title: "Supermercado & Feira",
+      category: "Alimentação",
+      dueDate: "14 dez.",
+      amount: 360.0,
+      type: "expense",
       status: "Estimado",
-      dotColor: "#9D4EDD",
+      dotColor: "#FF85A1",
     },
     {
       id: "fc-4",
-      title: "Passe de ônibus / metrô",
-      category: "Transporte",
-      dueDate: "22 dez.",
-      amount: 95.0,
-      status: "Estimado",
-      dotColor: "#9D4EDD",
+      title: "Auxílio permanência",
+      category: "Receita fixa",
+      dueDate: "08 dez.",
+      amount: 450.0,
+      type: "income",
+      status: "Confirmado",
+      dotColor: "#4DE8B3",
     },
     {
       id: "fc-5",
-      title: "Rateio de luz da república",
-      category: "Moradia",
-      dueDate: "24 dez.",
-      amount: 50.0,
+      title: "Monitoria acadêmica",
+      category: "Bolsa campus",
+      dueDate: "05 dez.",
+      amount: 200.0,
+      type: "income",
       status: "Estimado",
-      dotColor: "#9D4EDD",
+      dotColor: "#4DE8B3",
+    },
+    {
+      id: "fc-6",
+      title: "Rateio internet & luz",
+      category: "Serviços",
+      dueDate: "18 dez.",
+      amount: 115.0,
+      type: "expense",
+      status: "Estimado",
+      dotColor: "#FF85A1",
+    },
+    {
+      id: "fc-7",
+      title: "Passe estudantil",
+      category: "Transporte",
+      dueDate: "22 dez.",
+      amount: 95.0,
+      type: "expense",
+      status: "Confirmado",
+      dotColor: "#FF85A1",
+    },
+    {
+      id: "fc-8",
+      title: "Livros & materiais",
+      category: "Estudos",
+      dueDate: "24 dez.",
+      amount: 120.0,
+      type: "expense",
+      status: "Estimado",
+      dotColor: "#FF85A1",
     },
   ]);
 
@@ -260,14 +362,35 @@ export default function PlanejamentoPage() {
     { id: "outros", name: "Outros", amount: 45, percent: 3, color: "#7B2CBF" },
   ]);
 
-  // 7. Dados da Evolução por Categoria
-  const evolutionData: CategoryEvolution[] = [
+  // 7. Dados da Evolução por Categoria (Metas de Gastos)
+  const [evolutionData, setEvolutionData] = useState<CategoryEvolution[]>([
     { id: "moradia", name: "Moradia", current: 680, target: 700, previous: 680 },
     { id: "alimentacao", name: "Alimentação", current: 385, target: 420, previous: 360 },
     { id: "estudos", name: "Estudos", current: 145, target: 180, previous: 130 },
     { id: "transporte", name: "Transporte", current: 130, target: 150, previous: 125 },
     { id: "lazer", name: "Lazer", current: 95, target: 140, previous: 110 },
-  ];
+  ]);
+
+  // Modal de Cadastrar Nova Meta de Gastos
+  const [showNewGoalModal, setShowNewGoalModal] = useState(false);
+  const [goalCategoryName, setGoalCategoryName] = useState("");
+  const [goalTargetAmount, setGoalTargetAmount] = useState("");
+  const [goalCurrentAmount, setGoalCurrentAmount] = useState("");
+  const [goalPreviousAmount, setGoalPreviousAmount] = useState("");
+
+  // Totais Consolidados de Metas
+  const totalEvolutionCurrent = useMemo(
+    () => evolutionData.reduce((acc, curr) => acc + curr.current, 0),
+    [evolutionData]
+  );
+  const totalEvolutionTarget = useMemo(
+    () => evolutionData.reduce((acc, curr) => acc + curr.target, 0),
+    [evolutionData]
+  );
+  const totalEvolutionPrevious = useMemo(
+    () => evolutionData.reduce((acc, curr) => acc + curr.previous, 0),
+    [evolutionData]
+  );
 
   // Modais
   const [showAllTransactionsModal, setShowAllTransactionsModal] = useState(false);
@@ -386,6 +509,84 @@ export default function PlanejamentoPage() {
     }
   };
 
+  // Criação ou Atualização de Meta de Gastos
+  const handleCreateGoal = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanTarget = parseFloat(goalTargetAmount.replace(",", "."));
+    if (!goalCategoryName.trim() || isNaN(cleanTarget) || cleanTarget <= 0) {
+      showToast("Por favor, informe a categoria e um teto de meta válido.");
+      return;
+    }
+
+    const cleanCurrent = goalCurrentAmount ? parseFloat(goalCurrentAmount.replace(",", ".")) : 0;
+    const cleanPrevious = goalPreviousAmount ? parseFloat(goalPreviousAmount.replace(",", ".")) : 0;
+    const catNameTrimmed = goalCategoryName.trim();
+
+    const existingIndex = evolutionData.findIndex(
+      (item) => item.name.toLowerCase() === catNameTrimmed.toLowerCase()
+    );
+
+    if (existingIndex >= 0) {
+      // Atualizar meta existente
+      setEvolutionData((prev) =>
+        prev.map((item, idx) =>
+          idx === existingIndex
+            ? {
+                ...item,
+                target: cleanTarget,
+                ...(cleanCurrent > 0 ? { current: cleanCurrent } : {}),
+                ...(cleanPrevious > 0 ? { previous: cleanPrevious } : {}),
+              }
+            : item
+        )
+      );
+      showToast(`Meta para "${catNameTrimmed}" atualizada para ${formatCurrency(cleanTarget, false)}!`);
+      scrollToMeta(existingIndex);
+    } else {
+      // Cadastrar nova meta
+      const newId = `meta-${Date.now()}`;
+      const newEntry: CategoryEvolution = {
+        id: newId,
+        name: catNameTrimmed,
+        current: isNaN(cleanCurrent) ? 0 : cleanCurrent,
+        target: cleanTarget,
+        previous: isNaN(cleanPrevious) ? 0 : cleanPrevious,
+      };
+
+      setEvolutionData((prev) => [...prev, newEntry]);
+
+      // Sincronizar com categoriesSpending se ainda não existir
+      const catExists = categoriesSpending.some(
+        (c) => c.name.toLowerCase() === catNameTrimmed.toLowerCase()
+      );
+      if (!catExists) {
+        const colors = ["#FFD166", "#00E5FF", "#A8F45D", "#FF85A1", "#9D4EDD"];
+        const color = colors[categoriesSpending.length % colors.length];
+        setCategoriesSpending((prev) => [
+          ...prev,
+          {
+            id: newId,
+            name: catNameTrimmed,
+            amount: newEntry.current,
+            percent: 5,
+            color,
+          },
+        ]);
+      }
+
+      showToast(`Meta para "${catNameTrimmed}" cadastrada com sucesso!`);
+      setTimeout(() => {
+        scrollToMeta(evolutionData.length);
+      }, 100);
+    }
+
+    setGoalCategoryName("");
+    setGoalTargetAmount("");
+    setGoalCurrentAmount("");
+    setGoalPreviousAmount("");
+    setShowNewGoalModal(false);
+  };
+
   // Estados de Hover interativo nos gráficos
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredEvolutionCategory, setHoveredEvolutionCategory] = useState<CategoryEvolution | null>(null);
@@ -438,6 +639,7 @@ export default function PlanejamentoPage() {
     setFixedIncomes((prev) => [newEntry, ...prev]);
     setIncomeDesc("");
     setIncomeAmount("");
+    setFixedModalType(null);
     showToast(`Receita fixa "${newEntry.description}" adicionada com sucesso!`);
   };
 
@@ -462,6 +664,7 @@ export default function PlanejamentoPage() {
     setFixedExpenses((prev) => [newEntry, ...prev]);
     setExpenseDesc("");
     setExpenseAmount("");
+    setFixedModalType(null);
     showToast(`Despesa fixa "${newEntry.description}" adicionada com sucesso!`);
   };
 
@@ -488,6 +691,35 @@ export default function PlanejamentoPage() {
     );
   }, [transactions, searchQuery]);
 
+  // Separação em Despesas (Esquerda) e Receitas (Direita) + Totais e Saldo Final
+  const expenseTransactions = useMemo(
+    () => filteredTransactions.filter((tx) => tx.type === "expense"),
+    [filteredTransactions]
+  );
+
+  const incomeTransactions = useMemo(
+    () => filteredTransactions.filter((tx) => tx.type === "income"),
+    [filteredTransactions]
+  );
+
+  const totalMonthlyExpenses = useMemo(
+    () =>
+      transactions
+        .filter((tx) => tx.type === "expense")
+        .reduce((acc, curr) => acc + Math.abs(curr.amount), 0),
+    [transactions]
+  );
+
+  const totalMonthlyIncomes = useMemo(
+    () =>
+      transactions
+        .filter((tx) => tx.type === "income")
+        .reduce((acc, curr) => acc + Math.abs(curr.amount), 0),
+    [transactions]
+  );
+
+  const monthlyFinalBalance = totalMonthlyIncomes - totalMonthlyExpenses;
+
   // Previsões filtradas para a busca
   const filteredForecast = useMemo(() => {
     if (!searchQuery.trim()) return forecastItems;
@@ -496,6 +728,35 @@ export default function PlanejamentoPage() {
       (item) => item.title.toLowerCase().includes(q) || item.category.toLowerCase().includes(q)
     );
   }, [forecastItems, searchQuery]);
+
+  // Separação da Previsão em Despesas (Esquerda) e Receitas (Direita) + Totais e Saldo Previsto
+  const expenseForecast = useMemo(
+    () => filteredForecast.filter((fc) => fc.type === "expense"),
+    [filteredForecast]
+  );
+
+  const incomeForecast = useMemo(
+    () => filteredForecast.filter((fc) => fc.type === "income"),
+    [filteredForecast]
+  );
+
+  const totalForecastExpenses = useMemo(
+    () =>
+      forecastItems
+        .filter((fc) => fc.type === "expense")
+        .reduce((acc, curr) => acc + Math.abs(curr.amount), 0),
+    [forecastItems]
+  );
+
+  const totalForecastIncomes = useMemo(
+    () =>
+      forecastItems
+        .filter((fc) => fc.type === "income")
+        .reduce((acc, curr) => acc + Math.abs(curr.amount), 0),
+    [forecastItems]
+  );
+
+  const forecastFinalBalance = totalForecastIncomes - totalForecastExpenses;
 
   // Gráfico Donut de Distribuição SVG
   const radius = 70;
@@ -517,12 +778,14 @@ export default function PlanejamentoPage() {
   });
 
   return (
-    <div className="max-w-[1240px] mx-auto space-y-7 pb-12 select-none relative">
+    <div className="max-w-[1240px] w-full mx-auto space-y-6 md:space-y-7 pb-12 select-none relative overflow-x-hidden">
       {/* TOAST FLUTUANTE */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#1A162B] border border-[#D6B2FF]/30 text-white px-4 py-3 rounded-xl shadow-2xl shadow-purple-950/60 transition-all animate-bounce">
-          <CheckCircle2 size={18} className="text-[#4DE8B3]" />
-          <span className="text-xs font-medium">{toastMessage}</span>
+        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 z-50 flex items-center justify-between gap-3 bg-[#1A162B] border border-[#D6B2FF]/30 text-white px-4 py-3 rounded-xl shadow-2xl shadow-purple-950/60 transition-all">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 size={18} className="text-[#4DE8B3] shrink-0" />
+            <span className="text-xs font-medium">{toastMessage}</span>
+          </div>
           <button
             onClick={() => setToastMessage(null)}
             className="text-zinc-400 hover:text-white ml-2 cursor-pointer"
@@ -534,42 +797,18 @@ export default function PlanejamentoPage() {
 
       {/* 1. CABEÇALHO SUPERIOR */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 block mb-1">
-            Planejamento Financeiro
-          </span>
-          <h1 className="text-3xl font-bold text-white tracking-tight leading-tight">
-            Organize hoje. Respire<br />amanhã.
-          </h1>
-        </div>
-
-        {/* Ações da Direita */}
-        <div className="flex items-center gap-3 relative">
-          {/* Campo de Busca */}
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar"
-              className="bg-[#131024] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]/50 transition-colors w-48 sm:w-56"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
-              >
-                <X size={14} />
-              </button>
-            )}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 block mb-1">
+              TERÇA-FEIRA, 19 DE NOVEMBRO
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">
+              Planejamento Financeiro
+            </h1>
           </div>
 
-          {/* Botão de Notificações */}
-          <div className="relative">
+          {/* Botão de Notificações no Mobile (alinhado ao topo direito do título) */}
+          <div className="md:hidden relative shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -577,60 +816,104 @@ export default function PlanejamentoPage() {
                 setUnreadNotifications(0);
               }}
               aria-label="Notificações"
-              className="w-11 h-11 rounded-xl bg-[#131024] border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white hover:border-white/20 transition-all relative cursor-pointer"
+              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-[#131024] border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white hover:border-white/20 transition-all relative cursor-pointer"
             >
               <Bell size={18} />
               {unreadNotifications > 0 && (
                 <span className="w-2.5 h-2.5 rounded-full bg-[#4DE8B3] absolute top-2.5 right-2.5 ring-2 ring-[#131024]" />
               )}
             </button>
+          </div>
+        </div>
 
-            {/* Popover de Notificações */}
-            {showNotifications && (
-              <div className="absolute right-0 top-13 w-80 bg-[#131024] border border-white/10 rounded-2xl p-4 shadow-2xl z-40 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                  <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-                    Alertas do Planejamento
-                  </h3>
-                  <button
-                    onClick={() => setShowNotifications(false)}
-                    className="text-zinc-500 hover:text-white"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className="p-2.5 rounded-xl bg-[#19152B] hover:bg-[#1f1a36] transition-colors border border-white/5 space-y-1"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#D6B2FF]">{n.title}</span>
-                        <span className="text-[10px] text-zinc-500">{n.time}</span>
-                      </div>
-                      <p className="text-[11px] text-zinc-300 leading-snug">{n.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        {/* Ações da Direita (Busca Compacta + Notificações Desktop + Seletor de Mês) */}
+        <div className="flex items-center gap-2 sm:gap-3 relative w-full md:w-auto">
+          {/* Campo de Busca Compacto no Mobile para não gerar folga lateral */}
+          <div className="relative flex-1 min-w-0 md:flex-initial">
+            <Search
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full md:w-48 lg:w-56 min-h-[44px] bg-[#131024] border border-white/10 rounded-xl pl-8 pr-7 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]/50 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+              >
+                <X size={14} />
+              </button>
             )}
           </div>
 
+          {/* Botão de Notificações Desktop */}
+          <div className="hidden md:block relative shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setUnreadNotifications(0);
+              }}
+              aria-label="Notificações"
+              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-[#131024] border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white hover:border-white/20 transition-all relative cursor-pointer"
+            >
+              <Bell size={18} />
+              {unreadNotifications > 0 && (
+                <span className="w-2.5 h-2.5 rounded-full bg-[#4DE8B3] absolute top-2.5 right-2.5 ring-2 ring-[#131024]" />
+              )}
+            </button>
+          </div>
+
+          {/* Popover de Notificações */}
+          {showNotifications && (
+            <div className="fixed md:absolute left-4 right-4 md:left-auto md:right-0 top-36 md:top-13 md:w-80 bg-[#131024] border border-white/10 rounded-2xl p-4 shadow-2xl z-40 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                  Alertas do Planejamento
+                </h3>
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="text-zinc-500 hover:text-white"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className="p-2.5 rounded-xl bg-[#19152B] hover:bg-[#1f1a36] transition-colors border border-white/5 space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-[#D6B2FF]">{n.title}</span>
+                      <span className="text-[10px] text-zinc-500">{n.time}</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-snug">{n.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Seletor de Mês (Lilás conforme protótipo) */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-              className="bg-[#D6B2FF] text-[#0B0914] hover:bg-[#c79efc] px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors shadow-sm font-semibold"
+              className="min-h-[44px] bg-[#D6B2FF] text-[#0B0914] hover:bg-[#c79efc] px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
             >
-              <Calendar size={16} />
-              <span>{selectedMonth}</span>
+              <Calendar size={15} className="shrink-0" />
+              <span className="truncate max-w-[110px] sm:max-w-none">{selectedMonth}</span>
               <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${
-                  isMonthDropdownOpen ? "rotate-180" : ""
-                }`}
+                size={15}
+                className={`shrink-0 transition-transform duration-200 ${isMonthDropdownOpen ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -650,11 +933,10 @@ export default function PlanejamentoPage() {
                       setIsMonthDropdownOpen(false);
                       showToast(`Período alterado para ${m}`);
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer ${
-                      selectedMonth === m
+                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer ${selectedMonth === m
                         ? "bg-[#D6B2FF] text-[#0B0914] font-semibold"
                         : "text-zinc-300 hover:bg-white/5"
-                    }`}
+                      }`}
                   >
                     {m}
                   </button>
@@ -666,7 +948,59 @@ export default function PlanejamentoPage() {
       </header>
 
       {/* 2. ENTRADAS FIXAS RÁPIDAS (Linha 1) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Versão Mobile: Dois botões lado a lado que abrem um box/modal */}
+      <div className="grid grid-cols-2 gap-3 md:hidden">
+        <button
+          type="button"
+          onClick={() => setFixedModalType("income")}
+          className="min-h-[76px] rounded-2xl border border-[#4DE8B3]/25 bg-[#131024] hover:bg-[#19152B] p-3.5 flex flex-col justify-between text-left transition-all active:scale-[0.98] cursor-pointer shadow-lg"
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="w-8 h-8 rounded-xl bg-[#10E59B]/15 border border-[#10E59B]/30 flex items-center justify-center text-[#4DE8B3]">
+              <Wallet size={16} />
+            </div>
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#4DE8B3] bg-[#4DE8B3]/10 px-2 py-0.5 rounded-full">
+              <Plus size={11} />
+              Nova
+            </span>
+          </div>
+          <div className="mt-2">
+            <span className="text-[11px] font-medium text-zinc-400 block leading-tight">
+              Receitas Fixas
+            </span>
+            <span className="text-sm font-bold text-[#4DE8B3] block mt-0.5">
+              + {formatCurrency(totalFixedIncomes, false)}
+            </span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFixedModalType("expense")}
+          className="min-h-[76px] rounded-2xl border border-[#FF85A1]/25 bg-[#131024] hover:bg-[#19152B] p-3.5 flex flex-col justify-between text-left transition-all active:scale-[0.98] cursor-pointer shadow-lg"
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="w-8 h-8 rounded-xl bg-[#FF85A1]/15 border border-[#FF85A1]/30 flex items-center justify-center text-[#FF85A1]">
+              <ArrowLeftRight size={16} />
+            </div>
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#FF85A1] bg-[#FF85A1]/10 px-2 py-0.5 rounded-full">
+              <Plus size={11} />
+              Nova
+            </span>
+          </div>
+          <div className="mt-2">
+            <span className="text-[11px] font-medium text-zinc-400 block leading-tight">
+              Despesas Fixas
+            </span>
+            <span className="text-sm font-bold text-[#FF85A1] block mt-0.5">
+              - {formatCurrency(totalFixedExpenses, false)}
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* Versão Desktop/Tablet: Cards completos com formulário inline */}
+      <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Card: Receitas Fixas */}
         <div className="rounded-2xl border border-white/5 bg-[#131024] p-5 shadow-lg relative overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
@@ -812,181 +1146,337 @@ export default function PlanejamentoPage() {
         </div>
       </div>
 
-      {/* 3. TRANSAÇÕES DO MÊS E PREVISÃO FUTURA (Linha 2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* 3. TRANSAÇÕES DO MÊS E PREVISÃO FUTURA (Carrossel no Mobile / Grid no Desktop) */}
+      <div className="space-y-2.5">
+        <div
+          ref={txCarouselRef}
+          onScroll={handleTxCarouselScroll}
+          className="flex lg:grid lg:grid-cols-2 gap-3.5 lg:gap-5 overflow-x-auto lg:overflow-visible snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
         {/* Card: Transações do Mês Atual */}
-        <div className="rounded-2xl border border-white/5 bg-[#131024] p-5 sm:p-6 shadow-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase block">
-                  Novembro de 2025
-                </span>
-                <h3 className="text-base font-bold text-white tracking-tight">
-                  Transações do Mês Atual
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowAllTransactionsModal(true)}
-                className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                <span>Ver todas</span>
-                <ArrowRight size={14} />
-              </button>
+        <div className="w-[92%] sm:w-[88%] lg:w-auto shrink-0 snap-center rounded-2xl border border-white/5 bg-[#131024] p-3.5 sm:p-5 shadow-lg flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase block">
+                Novembro de 2025
+              </span>
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Transações do Mês Atual
+              </h3>
             </div>
+            <button
+              onClick={() => setShowAllTransactionsModal(true)}
+              className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>Ver todas</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
 
-            {/* Barra de Resumo */}
-            <div className="bg-[#19152B]/80 rounded-xl p-3 flex items-center justify-between border border-white/[0.04] mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">Movimentado</span>
-                <span className="text-xs sm:text-sm font-semibold text-white">R$ 1.850,00</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">Saldo do mês</span>
-                <span className="text-xs sm:text-sm font-bold text-[#4DE8B3]">+ R$ 370,00</span>
-              </div>
-            </div>
+          {/* Barra de Saldo Final no Topo */}
+          <div className="bg-[#19152B]/90 rounded-xl px-3 py-2 flex items-center justify-between border border-white/[0.06] mb-2.5">
+            <span className="text-xs font-medium text-zinc-400">Saldo final do mês</span>
+            <span
+              className={`text-sm font-bold ${monthlyFinalBalance >= 0 ? "text-[#4DE8B3]" : "text-[#FF85A1]"
+                }`}
+            >
+              {monthlyFinalBalance >= 0
+                ? `+ ${formatCurrency(monthlyFinalBalance)}`
+                : `- ${formatCurrency(Math.abs(monthlyFinalBalance))}`}
+            </span>
+          </div>
 
-            {/* Lista de Transações */}
-            <div className="space-y-3">
-              {filteredTransactions.slice(0, 4).map((tx) => (
-                <div
-                  key={tx.id}
-                  onClick={() => {
-                    const cat = categoriesSpending.find(
-                      (c) =>
-                        c.name.toLowerCase().includes(tx.category.toLowerCase()) ||
-                        tx.category.toLowerCase().includes(c.name.toLowerCase()) ||
-                        c.id.toLowerCase().includes(tx.category.toLowerCase())
-                    );
-                    if (cat) setSelectedCategoryModal(cat);
-                  }}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors border border-transparent hover:border-white/5 cursor-pointer group"
-                  title={`Clique para ver todos os gastos de ${tx.category}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0 group-hover:scale-125 transition-transform"
-                      style={{ backgroundColor: tx.color }}
-                    />
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-medium text-white group-hover:text-[#D6B2FF] transition-colors">
-                        {tx.title}
-                      </h4>
-                      <span className="text-[11px] text-zinc-500 group-hover:text-zinc-300 transition-colors">
-                        {tx.category}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    <span className="text-xs text-zinc-400 hidden sm:inline">{tx.date}</span>
-                    <span
-                      className={`text-xs sm:text-sm font-semibold ${
-                        tx.amount > 0 ? "text-[#4DE8B3]" : "text-[#FF85A1]"
-                      }`}
-                    >
-                      {tx.amount > 0 ? `+ ${formatCurrency(tx.amount)}` : `- ${formatCurrency(Math.abs(tx.amount))}`}
-                    </span>
-                  </div>
+          {/* Duas Tabelas Lado a Lado sem folga interna: Despesas (Esquerda) e Receitas (Direita) */}
+          <div className="grid grid-cols-2 border border-white/[0.07] rounded-xl bg-[#19152B]/40 overflow-hidden divide-x divide-white/[0.07]">
+            {/* LADO ESQUERDO: TABELA DE DESPESAS */}
+            <div className="min-w-0 flex flex-col">
+              {/* Total de Despesas em cima da tabela */}
+              <div className="px-2.5 py-2 bg-[#FF85A1]/[0.08] border-b border-white/[0.07] flex items-center justify-between gap-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF85A1] shrink-0" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-zinc-200 truncate">
+                    Despesas
+                  </span>
                 </div>
-              ))}
+                <span className="text-[11px] sm:text-xs font-bold text-[#FF85A1] whitespace-nowrap shrink-0">
+                  - {formatCurrency(totalMonthlyExpenses, false)}
+                </span>
+              </div>
+
+              {/* Tabela de Despesas sem folga */}
+              <table className="w-full table-fixed text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-[9px] sm:text-[10px] uppercase tracking-wider text-zinc-500">
+                    <th className="py-1.5 pl-2.5 pr-1 font-semibold w-[62%]">Descrição</th>
+                    <th className="py-1.5 pl-1 pr-2.5 font-semibold text-right w-[38%]">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {expenseTransactions.map((tx) => (
+                    <tr
+                      key={tx.id}
+                      onClick={() => {
+                        const cat = categoriesSpending.find(
+                          (c) =>
+                            c.name.toLowerCase().includes(tx.category.toLowerCase()) ||
+                            tx.category.toLowerCase().includes(c.name.toLowerCase()) ||
+                            c.id.toLowerCase().includes(tx.category.toLowerCase())
+                        );
+                        if (cat) setSelectedCategoryModal(cat);
+                      }}
+                      title={`Clique para ver os gastos de ${tx.category}`}
+                      className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    >
+                      <td className="py-1.5 pl-2.5 pr-1 min-w-0">
+                        <p className="text-[11px] sm:text-xs font-medium text-white truncate group-hover:text-[#FF85A1] transition-colors leading-tight">
+                          {tx.title}
+                        </p>
+                        <span className="text-[9px] sm:text-[10px] text-zinc-500 block truncate leading-tight">
+                          {tx.category}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pl-1 pr-2.5 text-right whitespace-nowrap align-middle">
+                        <span className="text-[11px] sm:text-xs font-semibold text-[#FF85A1]">
+                          -{formatCurrency(Math.abs(tx.amount), false)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* LADO DIREITO: TABELA DE RECEITAS */}
+            <div className="min-w-0 flex flex-col">
+              {/* Total de Receitas em cima da tabela */}
+              <div className="px-2.5 py-2 bg-[#4DE8B3]/[0.08] border-b border-white/[0.07] flex items-center justify-between gap-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#4DE8B3] shrink-0" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-zinc-200 truncate">
+                    Receitas
+                  </span>
+                </div>
+                <span className="text-[11px] sm:text-xs font-bold text-[#4DE8B3] whitespace-nowrap shrink-0">
+                  + {formatCurrency(totalMonthlyIncomes, false)}
+                </span>
+              </div>
+
+              {/* Tabela de Receitas sem folga */}
+              <table className="w-full table-fixed text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-[9px] sm:text-[10px] uppercase tracking-wider text-zinc-500">
+                    <th className="py-1.5 pl-2.5 pr-1 font-semibold w-[62%]">Descrição</th>
+                    <th className="py-1.5 pl-1 pr-2.5 font-semibold text-right w-[38%]">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {incomeTransactions.map((tx) => (
+                    <tr
+                      key={tx.id}
+                      onClick={() => setShowAllTransactionsModal(true)}
+                      className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    >
+                      <td className="py-1.5 pl-2.5 pr-1 min-w-0">
+                        <p className="text-[11px] sm:text-xs font-medium text-white truncate group-hover:text-[#4DE8B3] transition-colors leading-tight">
+                          {tx.title}
+                        </p>
+                        <span className="text-[9px] sm:text-[10px] text-zinc-500 block truncate leading-tight">
+                          {tx.category}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pl-1 pr-2.5 text-right whitespace-nowrap align-middle">
+                        <span className="text-[11px] sm:text-xs font-semibold text-[#4DE8B3]">
+                          +{formatCurrency(Math.abs(tx.amount), false)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
         {/* Card: Previsão do Próximo Mês */}
-        <div className="rounded-2xl border border-white/5 bg-[#131024] p-5 sm:p-6 shadow-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase block">
-                  Dezembro de 2025
-                </span>
-                <h3 className="text-base font-bold text-white tracking-tight">
-                  Previsão do Próximo Mês
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowCalendarModal(true)}
-                className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                <span>Ver calendário</span>
-                <ArrowRight size={14} />
-              </button>
+        <div className="w-[92%] sm:w-[88%] lg:w-auto shrink-0 snap-center rounded-2xl border border-white/5 bg-[#131024] p-3.5 sm:p-5 shadow-lg flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase block">
+                Dezembro de 2025
+              </span>
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Previsão do Próximo Mês
+              </h3>
             </div>
+            <button
+              onClick={() => setShowCalendarModal(true)}
+              className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>Ver calendário</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
 
-            {/* Barra de Resumo */}
-            <div className="bg-[#19152B]/80 rounded-xl p-3 flex items-center justify-between border border-white/[0.04] mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">Saldo previsto</span>
-                <span className="text-xs sm:text-sm font-semibold text-white">R$ 4.816,20</span>
-              </div>
-              <div>
-                <span className="text-[11px] font-medium text-[#D6B2FF] bg-[#9D4EDD]/20 px-2.5 py-1 rounded-full border border-[#9D4EDD]/30">
-                  82% das contas mapeadas
-                </span>
-              </div>
-            </div>
+          {/* Barra de Saldo Final Previsto no Topo */}
+          <div className="bg-[#19152B]/90 rounded-xl px-3 py-2 flex items-center justify-between border border-white/[0.06] mb-2.5">
+            <span className="text-xs font-medium text-zinc-400">Saldo final previsto</span>
+            <span
+              className={`text-sm font-bold ${
+                forecastFinalBalance >= 0 ? "text-[#4DE8B3]" : "text-[#FF85A1]"
+              }`}
+            >
+              {forecastFinalBalance >= 0
+                ? `+ ${formatCurrency(forecastFinalBalance)}`
+                : `- ${formatCurrency(Math.abs(forecastFinalBalance))}`}
+            </span>
+          </div>
 
-            {/* Lista de Contas Futuras */}
-            <div className="space-y-3">
-              {filteredForecast.slice(0, 4).map((fc) => (
-                <div
-                  key={fc.id}
-                  onClick={() => {
-                    const cat = categoriesSpending.find(
-                      (c) =>
-                        c.name.toLowerCase().includes(fc.category.toLowerCase()) ||
-                        fc.category.toLowerCase().includes(c.name.toLowerCase()) ||
-                        c.id.toLowerCase().includes(fc.category.toLowerCase())
-                    );
-                    if (cat) setSelectedCategoryModal(cat);
-                  }}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors border border-transparent hover:border-white/5 cursor-pointer group"
-                  title={`Clique para ver todos os gastos de ${fc.category}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0 group-hover:scale-125 transition-transform"
-                      style={{ backgroundColor: fc.dotColor }}
-                    />
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-medium text-white group-hover:text-[#D6B2FF] transition-colors">
-                        {fc.title}
-                      </h4>
-                      <p className="text-[11px] text-zinc-500 group-hover:text-zinc-300 transition-colors">
-                        {fc.category}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 sm:gap-6">
-                    {/* Badge de Status Interativo */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleForecastStatus(fc.id);
-                      }}
-                      title="Clique para alternar status"
-                      className={`text-[10px] sm:text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                        fc.status === "Confirmado"
-                          ? "bg-[#10E59B]/15 text-[#10E59B] border border-[#10E59B]/30 hover:bg-[#10E59B]/25"
-                          : "bg-white/5 text-zinc-400 border border-white/10 hover:bg-white/10 hover:text-zinc-200"
-                      }`}
-                    >
-                      {fc.status}
-                    </button>
-
-                    <span className="text-xs text-zinc-400 hidden sm:inline">{fc.dueDate}</span>
-                    <span className="text-xs sm:text-sm font-semibold text-white">
-                      {formatCurrency(fc.amount)}
-                    </span>
-                  </div>
+          {/* Duas Tabelas Lado a Lado sem folga interna: Despesas (Esquerda) e Receitas (Direita) */}
+          <div className="grid grid-cols-2 border border-white/[0.07] rounded-xl bg-[#19152B]/40 overflow-hidden divide-x divide-white/[0.07]">
+            {/* LADO ESQUERDO: TABELA DE DESPESAS PREVISTAS */}
+            <div className="min-w-0 flex flex-col">
+              {/* Total de Despesas em cima da tabela */}
+              <div className="px-2.5 py-2 bg-[#FF85A1]/[0.08] border-b border-white/[0.07] flex items-center justify-between gap-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF85A1] shrink-0" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-zinc-200 truncate">
+                    Despesas
+                  </span>
                 </div>
-              ))}
+                <span className="text-[11px] sm:text-xs font-bold text-[#FF85A1] whitespace-nowrap shrink-0">
+                  - {formatCurrency(totalForecastExpenses, false)}
+                </span>
+              </div>
+
+              {/* Tabela de Despesas Previstas sem folga */}
+              <table className="w-full table-fixed text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-[9px] sm:text-[10px] uppercase tracking-wider text-zinc-500">
+                    <th className="py-1.5 pl-2.5 pr-1 font-semibold w-[62%]">Descrição</th>
+                    <th className="py-1.5 pl-1 pr-2.5 font-semibold text-right w-[38%]">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {expenseForecast.map((fc) => (
+                    <tr
+                      key={fc.id}
+                      onClick={() => toggleForecastStatus(fc.id)}
+                      title={`Status: ${fc.status} (clique para alternar)`}
+                      className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    >
+                      <td className="py-1.5 pl-2.5 pr-1 min-w-0">
+                        <p className="text-[11px] sm:text-xs font-medium text-white truncate group-hover:text-[#FF85A1] transition-colors leading-tight">
+                          {fc.title}
+                        </p>
+                        <span className="text-[9px] sm:text-[10px] text-zinc-500 block truncate leading-tight">
+                          {fc.dueDate} • {fc.status}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pl-1 pr-2.5 text-right whitespace-nowrap align-middle">
+                        <span className="text-[11px] sm:text-xs font-semibold text-[#FF85A1]">
+                          -{formatCurrency(Math.abs(fc.amount), false)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+
+            {/* LADO DIREITO: TABELA DE RECEITAS PREVISTAS */}
+            <div className="min-w-0 flex flex-col">
+              {/* Total de Receitas em cima da tabela */}
+              <div className="px-2.5 py-2 bg-[#4DE8B3]/[0.08] border-b border-white/[0.07] flex items-center justify-between gap-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#4DE8B3] shrink-0" />
+                  <span className="text-[11px] sm:text-xs font-semibold text-zinc-200 truncate">
+                    Receitas
+                  </span>
+                </div>
+                <span className="text-[11px] sm:text-xs font-bold text-[#4DE8B3] whitespace-nowrap shrink-0">
+                  + {formatCurrency(totalForecastIncomes, false)}
+                </span>
+              </div>
+
+              {/* Tabela de Receitas Previstas sem folga */}
+              <table className="w-full table-fixed text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-[9px] sm:text-[10px] uppercase tracking-wider text-zinc-500">
+                    <th className="py-1.5 pl-2.5 pr-1 font-semibold w-[62%]">Descrição</th>
+                    <th className="py-1.5 pl-1 pr-2.5 font-semibold text-right w-[38%]">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {incomeForecast.map((fc) => (
+                    <tr
+                      key={fc.id}
+                      onClick={() => toggleForecastStatus(fc.id)}
+                      title={`Status: ${fc.status} (clique para alternar)`}
+                      className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    >
+                      <td className="py-1.5 pl-2.5 pr-1 min-w-0">
+                        <p className="text-[11px] sm:text-xs font-medium text-white truncate group-hover:text-[#4DE8B3] transition-colors leading-tight">
+                          {fc.title}
+                        </p>
+                        <span className="text-[9px] sm:text-[10px] text-zinc-500 block truncate leading-tight">
+                          {fc.dueDate} • {fc.status}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pl-1 pr-2.5 text-right whitespace-nowrap align-middle">
+                        <span className="text-[11px] sm:text-xs font-semibold text-[#4DE8B3]">
+                          +{formatCurrency(Math.abs(fc.amount), false)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        {/* Indicadores de Página do Carrossel (Exclusivo Mobile/Tablet) */}
+        <div className="flex lg:hidden items-center justify-center gap-2 pt-0.5">
+          {[
+            { idx: 0, label: "Mês Atual" },
+            { idx: 1, label: "Próximo Mês" },
+          ].map((slide) => (
+            <button
+              key={slide.idx}
+              type="button"
+              onClick={() => scrollToTxSlide(slide.idx)}
+              aria-label={`Ir para ${slide.label}`}
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                activeTxSlide === slide.idx
+                  ? "w-6 bg-[#D6B2FF]"
+                  : "w-1.5 bg-white/20 hover:bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* DIVISOR VISUAL ENTRE SEÇÃO DE TABELAS E SEÇÃO DE GRÁFICOS */}
+      <div className="pt-2 pb-1 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/15 to-[#D6B2FF]/40" />
+          <div className="flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#131024] border border-[#D6B2FF]/25 text-[10px] font-semibold uppercase tracking-widest text-[#D6B2FF] shadow-sm">
+            <TrendingUp size={12} className="text-[#D6B2FF]" />
+            <span>Análise & Gráficos</span>
+          </div>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent via-white/15 to-[#D6B2FF]/40" />
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <span className="w-1.5 h-5 rounded-full bg-[#D6B2FF]" />
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-white tracking-tight leading-tight">
+              Distribuição e Evolução por Categoria
+            </h2>
+            <p className="text-[11px] text-zinc-400">
+              Proporção dos seus gastos no mês e comparativo com suas metas
+            </p>
           </div>
         </div>
       </div>
@@ -1093,9 +1583,9 @@ export default function PlanejamentoPage() {
                     <span className="text-xl font-bold text-white tracking-tight">
                       {hoveredCategory
                         ? formatCurrency(
-                            categoriesSpending.find((c) => c.id === hoveredCategory)?.amount || 0,
-                            false
-                          )
+                          categoriesSpending.find((c) => c.id === hoveredCategory)?.amount || 0,
+                          false
+                        )
                         : formatCurrency(totalSpentCategories, false)}
                     </span>
                     <span className="text-[10px] text-cyan-400 font-semibold mt-0.5">
@@ -1118,9 +1608,8 @@ export default function PlanejamentoPage() {
                       onMouseEnter={() => setHoveredCategory(cat.id)}
                       onMouseLeave={() => setHoveredCategory(null)}
                       onClick={() => setSelectedCategoryModal(cat)}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer group select-none text-left ${
-                        isHovered ? "bg-white/[0.08] translate-x-1" : "hover:bg-white/[0.04]"
-                      }`}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer group select-none text-left ${isHovered ? "bg-white/[0.08] translate-x-1" : "hover:bg-white/[0.04]"
+                        }`}
                       title={`Clique para ver todos os gastos em ${cat.name}`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -1132,9 +1621,8 @@ export default function PlanejamentoPage() {
                           }}
                         />
                         <span
-                          className={`text-xs transition-colors ${
-                            isHovered ? "text-white font-semibold" : "text-zinc-300 group-hover:text-white"
-                          }`}
+                          className={`text-xs transition-colors ${isHovered ? "text-white font-semibold" : "text-zinc-300 group-hover:text-white"
+                            }`}
                         >
                           {cat.name}
                         </span>
@@ -1160,237 +1648,581 @@ export default function PlanejamentoPage() {
           </div>
         </div>
 
-        {/* Card: Evolução por Categoria (Grouped Bar Chart) */}
-        <div className="lg:col-span-7 rounded-2xl border border-white/5 bg-[#131024] p-5 sm:p-6 shadow-lg flex flex-col justify-between relative">
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-              <div>
-                <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase block">
-                  Evolução por Categoria
-                </span>
-                <h3 className="text-base font-bold text-white tracking-tight">
-                  Gasto Atual vs Meta vs Gasto Mês Passado
-                </h3>
+        {/* Card: Coletânea de Gráficos de Barras Horizontais (Totais + Carrossel de Metas) */}
+        <div className="lg:col-span-7 rounded-2xl border border-white/5 bg-[#131024] p-4 sm:p-6 shadow-lg flex flex-col justify-between relative space-y-4 sm:space-y-5">
+          {/* Cabeçalho do Card */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/5">
+            <div>
+              <span className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase block">
+                Evolução e Metas
+              </span>
+              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                Comparativo de Gastos e Metas
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Legenda Geral de Cores */}
+              <div className="flex items-center gap-2.5 text-[11px] text-zinc-400">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#D6B2FF]" />
+                  <span className="text-zinc-300">Atual</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#4DE8B3]" />
+                  <span className="text-zinc-300">Meta</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#7B2CBF]" />
+                  <span className="text-zinc-300">Anterior</span>
+                </div>
               </div>
 
-              {/* Legenda do Gráfico */}
-              <div className="flex items-center gap-3 text-[11px] text-zinc-400">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#D6B2FF]" />
-                  <span>Gasto atual</span>
+              {/* Botão Cadastrar Nova Meta */}
+              <button
+                type="button"
+                onClick={() => setShowNewGoalModal(true)}
+                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#D6B2FF] hover:bg-[#c79efc] text-[#0B0914] font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-purple-950/30 cursor-pointer active:scale-95 shrink-0"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                <span>Nova Meta</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 1. PRIMEIRO GRÁFICO: COMPARAÇÃO DOS TOTAIS GERAIS (Barras Horizontais) */}
+          <div className="rounded-xl border border-white/10 bg-[#19152B]/80 p-3.5 sm:p-4 shadow-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#D6B2FF]/10 text-[#D6B2FF] flex items-center justify-center">
+                  <Target size={15} />
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#4DE8B3]" />
-                  <span>Meta</span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-white leading-tight">
+                    Comparação Geral dos Totais
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-zinc-400">
+                    Soma consolidada de todas as metas
+                  </p>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#4A3B69]" />
-                  <span>Mês passado</span>
+              </div>
+
+              {/* Badge de Status Geral */}
+              <span
+                className={`text-[10px] sm:text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                  totalEvolutionCurrent <= totalEvolutionTarget
+                    ? "bg-[#10E59B]/15 text-[#10E59B] border border-[#10E59B]/30"
+                    : "bg-[#FF85A1]/15 text-[#FF85A1] border border-[#FF85A1]/30"
+                }`}
+              >
+                {totalEvolutionCurrent <= totalEvolutionTarget
+                  ? `Dentro do teto (Sobram ${formatCurrency(totalEvolutionTarget - totalEvolutionCurrent, false)})`
+                  : `Acima do teto (+${formatCurrency(totalEvolutionCurrent - totalEvolutionTarget, false)})`}
+              </span>
+            </div>
+
+            {/* Barras Horizontais dos Totais */}
+            {(() => {
+              const maxTotal =
+                Math.max(totalEvolutionCurrent, totalEvolutionTarget, totalEvolutionPrevious, 1) * 1.05;
+              const currentPct = Math.min(100, (totalEvolutionCurrent / maxTotal) * 100);
+              const targetPct = Math.min(100, (totalEvolutionTarget / maxTotal) * 100);
+              const prevPct = Math.min(100, (totalEvolutionPrevious / maxTotal) * 100);
+
+              return (
+                <div className="space-y-2.5 pt-1">
+                  {/* Barra 1: Gasto Atual Consolidado */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-300 flex items-center gap-1.5 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-[#D6B2FF]" />
+                        Gasto atual total
+                      </span>
+                      <span className="font-bold text-white">
+                        {formatCurrency(totalEvolutionCurrent)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full bg-[#131024] rounded-full overflow-hidden p-0.5 border border-white/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#9D4EDD] to-[#D6B2FF] transition-all duration-500 shadow-[0_0_8px_rgba(214,178,255,0.4)]"
+                        style={{ width: `${currentPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Barra 2: Meta Global Consolidada */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-300 flex items-center gap-1.5 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-[#4DE8B3]" />
+                        Meta global planejada
+                      </span>
+                      <span className="font-bold text-[#4DE8B3]">
+                        {formatCurrency(totalEvolutionTarget)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full bg-[#131024] rounded-full overflow-hidden p-0.5 border border-white/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#10E59B] to-[#4DE8B3] transition-all duration-500 shadow-[0_0_8px_rgba(77,232,179,0.3)]"
+                        style={{ width: `${targetPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Barra 3: Mês Anterior Consolidado */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400 flex items-center gap-1.5 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-[#7B2CBF]" />
+                        Total do mês anterior
+                      </span>
+                      <span className="font-semibold text-zinc-300">
+                        {formatCurrency(totalEvolutionPrevious)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full bg-[#131024] rounded-full overflow-hidden p-0.5 border border-white/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#3A2A5E] to-[#7B2CBF] transition-all duration-500"
+                        style={{ width: `${prevPct}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
+              );
+            })()}
+
+            {/* Rodapé do Bloco de Totais */}
+            <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-400">
+              <span>
+                Consumido:{" "}
+                <strong className="text-white">
+                  {((totalEvolutionCurrent / (totalEvolutionTarget || 1)) * 100).toFixed(0)}%
+                </strong>{" "}
+                da meta geral
+              </span>
+              <span className="text-[#4DE8B3] font-medium">
+                Economia de {formatCurrency(totalEvolutionTarget - totalEvolutionCurrent, false)}
+              </span>
+            </div>
+          </div>
+
+          {/* 2. SEGUNDO BLOCO: CARROSSEL DE BARRAS HORIZONTAIS POR META DEFINIDA */}
+          <div className="space-y-2.5">
+            {/* Cabeçalho do Carrossel com Navegação */}
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">
+                  Metas por Categoria
+                </span>
+                <span className="text-xs font-bold text-white">
+                  Meta {activeMetaIndex + 1} de {evolutionData.length}:{" "}
+                  <span className="text-[#D6B2FF]">{evolutionData[activeMetaIndex]?.name}</span>
+                </span>
+              </div>
+
+              {/* Botões de Navegação Anterior / Próximo */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => scrollToMeta(Math.max(0, activeMetaIndex - 1))}
+                  disabled={activeMetaIndex === 0}
+                  aria-label="Meta anterior"
+                  className="min-h-[44px] min-w-[44px] w-11 h-11 rounded-xl bg-[#19152B] border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    scrollToMeta(Math.min(evolutionData.length - 1, activeMetaIndex + 1))
+                  }
+                  disabled={activeMetaIndex === evolutionData.length - 1}
+                  aria-label="Próxima meta"
+                  className="min-h-[44px] min-w-[44px] w-11 h-11 rounded-xl bg-[#19152B] border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  <ChevronRight size={18} />
+                </button>
               </div>
             </div>
 
-            {/* Gráfico de Barras Agrupadas SVG Puro */}
-            <div className="relative pt-2">
-              <svg
-                viewBox="0 0 520 200"
-                className="w-full h-52 sm:h-56 overflow-visible select-none"
+            {/* Pílulas de Acesso Rápido para Cada Categoria */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {evolutionData.map((item, idx) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => scrollToMeta(idx)}
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeMetaIndex === idx
+                      ? "bg-[#D6B2FF] text-[#0B0914] shadow-md shadow-purple-950/40"
+                      : "bg-[#19152B] text-zinc-400 hover:text-white border border-white/5 hover:border-white/15"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      activeMetaIndex === idx ? "bg-[#0B0914]" : "bg-[#D6B2FF]"
+                    }`}
+                  />
+                  <span>{item.name}</span>
+                </button>
+              ))}
+
+              {/* Botão Atalho Nova Meta nas Pílulas */}
+              <button
+                type="button"
+                onClick={() => setShowNewGoalModal(true)}
+                className="min-h-[44px] px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 bg-[#D6B2FF]/10 text-[#D6B2FF] hover:bg-[#D6B2FF]/20 border border-[#D6B2FF]/30 active:scale-95 shrink-0"
+                title="Cadastrar nova meta de gastos"
               >
-                {/* Linhas de Grade e Eixo Y */}
-                <line
-                  x1="55"
-                  y1="25"
-                  x2="510"
-                  y2="25"
-                  stroke="rgba(255,255,255,0.06)"
-                  strokeDasharray="4 4"
-                />
-                <text x="15" y="29" fill="#71717A" fontSize="10" fontFamily="sans-serif">
-                  R$ 2 mil
-                </text>
+                <Plus size={14} strokeWidth={2.5} />
+                <span>Nova Meta</span>
+              </button>
+            </div>
 
-                <line
-                  x1="55"
-                  y1="90"
-                  x2="510"
-                  y2="90"
-                  stroke="rgba(255,255,255,0.06)"
-                  strokeDasharray="4 4"
-                />
-                <text x="15" y="94" fill="#71717A" fontSize="10" fontFamily="sans-serif">
-                  R$ 1 mil
-                </text>
+            {/* Container do Carrossel Horizontal das Metas */}
+            <div
+              ref={metaCarouselRef}
+              onScroll={handleMetaCarouselScroll}
+              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {evolutionData.map((item) => {
+                const maxVal = Math.max(item.current, item.target, item.previous, 1) * 1.08;
+                const currentPct = Math.min(100, (item.current / maxVal) * 100);
+                const targetPct = Math.min(100, (item.target / maxVal) * 100);
+                const prevPct = Math.min(100, (item.previous / maxVal) * 100);
+                const usedPct = ((item.current / (item.target || 1)) * 100).toFixed(0);
+                const margin = item.target - item.current;
 
-                <line
-                  x1="55"
-                  y1="155"
-                  x2="510"
-                  y2="155"
-                  stroke="rgba(255,255,255,0.12)"
-                />
-                <text x="25" y="159" fill="#71717A" fontSize="10" fontFamily="sans-serif">
-                  R$ 0
-                </text>
+                return (
+                  <div
+                    key={item.id}
+                    className="w-full shrink-0 snap-center rounded-xl border border-white/5 bg-[#19152B]/60 p-3.5 sm:p-4 space-y-3"
+                  >
+                    {/* Linha de Título da Categoria */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#D6B2FF] shrink-0" />
+                        <h4 className="text-sm font-bold text-white">{item.name}</h4>
+                        <span className="text-[11px] text-zinc-400">({usedPct}% da meta)</span>
+                      </div>
 
-                {/* Categorias no Eixo X e Barras Agrupadas */}
-                {evolutionData.map((item, idx) => {
-                  const groupWidth = 85;
-                  const startX = 65 + idx * groupWidth;
-                  const barWidth = 8;
-                  const maxVal = 2400;
-                  const chartBaseY = 155;
-                  const availableHeight = 130;
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[10px] sm:text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                            item.current <= item.target
+                              ? "bg-[#10E59B]/15 text-[#10E59B] border border-[#10E59B]/30"
+                              : "bg-[#FF85A1]/15 text-[#FF85A1] border border-[#FF85A1]/30"
+                          }`}
+                        >
+                          {item.current <= item.target
+                            ? `Dentro da meta (${formatCurrency(margin, false)} livres)`
+                            : `Acima da meta (+${formatCurrency(Math.abs(margin), false)})`}
+                        </span>
 
-                  const currentH = (item.current / maxVal) * availableHeight;
-                  const targetH = (item.target / maxVal) * availableHeight;
-                  const prevH = (item.previous / maxVal) * availableHeight;
-
-                  const isHovered = hoveredEvolutionCategory?.id === item.id;
-
-                  return (
-                    <g
-                      key={item.id}
-                      className="cursor-pointer group"
-                      style={{ pointerEvents: "all" }}
-                      onMouseEnter={() => setHoveredEvolutionCategory(item)}
-                      onMouseLeave={() => setHoveredEvolutionCategory(null)}
-                      onClick={() => {
-                        const cat = categoriesSpending.find((c) => c.id === item.id);
-                        if (cat) setSelectedCategoryModal(cat);
-                      }}
-                    >
-                      {/* Área de Captura Hover invisível com pointer-events all */}
-                      <rect
-                        x={startX - 10}
-                        y="15"
-                        width={groupWidth - 5}
-                        height="150"
-                        fill="rgba(0,0,0,0.001)"
-                        style={{ pointerEvents: "all", cursor: "pointer" }}
-                      />
-
-                      {/* Barra 1: Gasto Atual (Lilás) */}
-                      <rect
-                        x={startX + 8}
-                        y={chartBaseY - currentH}
-                        width={barWidth}
-                        height={currentH}
-                        rx="3"
-                        fill="#D6B2FF"
-                        style={{
-                          opacity: hoveredEvolutionCategory && !isHovered ? 0.4 : 1,
-                          filter: isHovered ? "drop-shadow(0 0 6px #D6B2FF)" : "none",
-                          pointerEvents: "all",
-                          cursor: "pointer",
-                        }}
-                        className="transition-all duration-300"
-                      />
-
-                      {/* Barra 2: Meta (Menta) */}
-                      <rect
-                        x={startX + 20}
-                        y={chartBaseY - targetH}
-                        width={barWidth}
-                        height={targetH}
-                        rx="3"
-                        fill="#4DE8B3"
-                        style={{
-                          opacity: hoveredEvolutionCategory && !isHovered ? 0.4 : 1,
-                          filter: isHovered ? "drop-shadow(0 0 6px #4DE8B3)" : "none",
-                          pointerEvents: "all",
-                          cursor: "pointer",
-                        }}
-                        className="transition-all duration-300"
-                      />
-
-                      {/* Barra 3: Mês Passado (Roxo Escuro / Índigo) */}
-                      <rect
-                        x={startX + 32}
-                        y={chartBaseY - prevH}
-                        width={barWidth}
-                        height={prevH}
-                        rx="3"
-                        fill="#4A3B69"
-                        style={{
-                          opacity: hoveredEvolutionCategory && !isHovered ? 0.4 : 1,
-                          pointerEvents: "all",
-                          cursor: "pointer",
-                        }}
-                        className="transition-all duration-300"
-                      />
-
-                      {/* Rótulo da Categoria */}
-                      <text
-                        x={startX + 24}
-                        y="175"
-                        textAnchor="middle"
-                        fill={isHovered ? "#FFFFFF" : "#71717A"}
-                        fontSize="11"
-                        fontWeight={isHovered ? "600" : "400"}
-                        className="transition-colors duration-200 cursor-pointer"
-                        style={{ pointerEvents: "all" }}
-                      >
-                        {item.name}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
-
-              {/* Tooltip Dinâmico do Gráfico de Barras */}
-              {hoveredEvolutionCategory && (
-                <div className="absolute top-0 right-4 bg-[#19152B] border border-white/10 rounded-xl p-3 shadow-2xl z-30 pointer-events-none animate-fadeIn">
-                  <div className="flex items-center justify-between gap-4 mb-1.5 pb-1 border-b border-white/5">
-                    <span className="text-xs font-bold text-white">
-                      {hoveredEvolutionCategory.name}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        hoveredEvolutionCategory.current <= hoveredEvolutionCategory.target
-                          ? "bg-[#10E59B]/15 text-[#10E59B]"
-                          : "bg-[#FF85A1]/15 text-[#FF85A1]"
-                      }`}
-                    >
-                      {hoveredEvolutionCategory.current <= hoveredEvolutionCategory.target
-                        ? "Dentro da meta"
-                        : "Acima da meta"}
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-[11px]">
-                    <div className="flex items-center justify-between gap-4 text-zinc-300">
-                      <span className="flex items-center gap-1.5 text-zinc-400">
-                        <span className="w-2 h-2 rounded-full bg-[#D6B2FF]" />
-                        Gasto Atual:
-                      </span>
-                      <span className="font-semibold text-white">
-                        {formatCurrency(hoveredEvolutionCategory.current)}
-                      </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cat = categoriesSpending.find((c) => c.id === item.id);
+                            if (cat) setSelectedCategoryModal(cat);
+                          }}
+                          className="min-h-[44px] px-2 text-[11px] font-medium text-[#D6B2FF] hover:underline cursor-pointer flex items-center"
+                        >
+                          Ver gastos →
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-4 text-zinc-300">
-                      <span className="flex items-center gap-1.5 text-zinc-400">
-                        <span className="w-2 h-2 rounded-full bg-[#4DE8B3]" />
-                        Meta Estabelecida:
-                      </span>
-                      <span className="font-semibold text-white">
-                        {formatCurrency(hoveredEvolutionCategory.target)}
-                      </span>
+
+                    {/* 3 Barras Horizontais da Categoria */}
+                    <div className="space-y-2.5">
+                      {/* Barra: Gasto Atual */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-zinc-300 flex items-center gap-1.5 font-medium">
+                            <span className="w-2 h-2 rounded-full bg-[#D6B2FF]" />
+                            Gasto atual
+                          </span>
+                          <span className="font-bold text-white">
+                            {formatCurrency(item.current)}
+                          </span>
+                        </div>
+                        <div className="h-3 w-full bg-[#131024] rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[#9D4EDD] to-[#D6B2FF] transition-all duration-500 shadow-[0_0_8px_rgba(214,178,255,0.4)]"
+                            style={{ width: `${currentPct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Barra: Meta Estabelecida */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-zinc-300 flex items-center gap-1.5 font-medium">
+                            <span className="w-2 h-2 rounded-full bg-[#4DE8B3]" />
+                            Meta estabelecida
+                          </span>
+                          <span className="font-bold text-[#4DE8B3]">
+                            {formatCurrency(item.target)}
+                          </span>
+                        </div>
+                        <div className="h-3 w-full bg-[#131024] rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[#10E59B] to-[#4DE8B3] transition-all duration-500 shadow-[0_0_8px_rgba(77,232,179,0.3)]"
+                            style={{ width: `${targetPct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Barra: Mês Anterior */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-zinc-400 flex items-center gap-1.5 font-medium">
+                            <span className="w-2 h-2 rounded-full bg-[#7B2CBF]" />
+                            Mês anterior
+                          </span>
+                          <span className="font-semibold text-zinc-300">
+                            {formatCurrency(item.previous)}
+                          </span>
+                        </div>
+                        <div className="h-3 w-full bg-[#131024] rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[#3A2A5E] to-[#7B2CBF] transition-all duration-500"
+                            style={{ width: `${prevPct}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-4 text-zinc-300">
-                      <span className="flex items-center gap-1.5 text-zinc-400">
-                        <span className="w-2 h-2 rounded-full bg-[#4A3B69]" />
-                        Mês Anterior:
+
+                    {/* Rodapé Informativo da Categoria */}
+                    <div className="pt-2 border-t border-white/5 flex flex-wrap items-center justify-between text-[11px] text-zinc-400 gap-2">
+                      <span>
+                        Margem disponível:{" "}
+                        <strong
+                          className={margin >= 0 ? "text-[#4DE8B3]" : "text-[#FF85A1]"}
+                        >
+                          {margin >= 0
+                            ? formatCurrency(margin)
+                            : `- ${formatCurrency(Math.abs(margin))}`}
+                        </strong>
                       </span>
-                      <span className="font-semibold text-white">
-                        {formatCurrency(hoveredEvolutionCategory.previous)}
+                      <span>
+                        Comparativo:{" "}
+                        <strong className="text-white">
+                          {item.current === item.previous
+                            ? "Igual ao mês anterior"
+                            : item.current < item.previous
+                            ? `${formatCurrency(item.previous - item.current, false)} a menos`
+                            : `${formatCurrency(item.current - item.previous, false)} a mais`}
+                        </strong>
                       </span>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })}
+            </div>
+
+            {/* Indicadores de Página do Carrossel de Metas */}
+            <div className="flex items-center justify-center gap-1.5 pt-1">
+              {evolutionData.map((item, idx) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => scrollToMeta(idx)}
+                  aria-label={`Ir para meta de ${item.name}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    activeMetaIndex === idx
+                      ? "w-6 bg-[#D6B2FF]"
+                      : "w-1.5 bg-white/20 hover:bg-white/40"
+                  }`}
+                />
+              ))}
             </div>
           </div>
         </div>
       </div>
+
+      {/* 4.5. MODAL MOBILE: CADASTRAR RECEITA OU DESPESA FIXA */}
+      {fixedModalType && (
+        <div
+          onClick={() => setFixedModalType(null)}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-[#131024] border border-white/10 p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto"
+          >
+            {/* Cabeçalho do Box */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center border ${fixedModalType === "income"
+                      ? "bg-[#10E59B]/10 border-[#10E59B]/25 text-[#4DE8B3]"
+                      : "bg-[#FF85A1]/10 border-[#FF85A1]/25 text-[#FF85A1]"
+                    }`}
+                >
+                  {fixedModalType === "income" ? (
+                    <Wallet size={20} />
+                  ) : (
+                    <ArrowLeftRight size={20} />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {fixedModalType === "income"
+                      ? "Receitas Fixas"
+                      : "Despesas Fixas"}
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    {fixedModalType === "income"
+                      ? `Total atual: + ${formatCurrency(totalFixedIncomes)}`
+                      : `Total atual: - ${formatCurrency(totalFixedExpenses)}`}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFixedModalType(null)}
+                aria-label="Fechar modal"
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-zinc-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Lista de Itens Fixos já Cadastrados */}
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {(fixedModalType === "income" ? fixedIncomes : fixedExpenses).map(
+                (entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs"
+                  >
+                    <div>
+                      <span className="font-medium text-white block">
+                        {entry.description}
+                      </span>
+                      <span className="text-[10px] text-zinc-400">
+                        Vencimento: Dia {entry.dueDay}
+                      </span>
+                    </div>
+                    <span
+                      className={`font-bold ${fixedModalType === "income"
+                          ? "text-[#4DE8B3]"
+                          : "text-[#FF85A1]"
+                        }`}
+                    >
+                      {fixedModalType === "income" ? "+" : "-"}{" "}
+                      {formatCurrency(entry.amount)}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Formulário para Adicionar Nova Receita ou Despesa Fixa */}
+            <form
+              onSubmit={
+                fixedModalType === "income"
+                  ? handleAddFixedIncome
+                  : handleAddFixedExpense
+              }
+              className="space-y-3.5 pt-2 border-t border-white/10"
+            >
+              <div>
+                <label className="text-xs text-zinc-400 font-medium block mb-1">
+                  Descrição
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fixedModalType === "income" ? incomeDesc : expenseDesc}
+                  onChange={(e) =>
+                    fixedModalType === "income"
+                      ? setIncomeDesc(e.target.value)
+                      : setExpenseDesc(e.target.value)
+                  }
+                  placeholder={
+                    fixedModalType === "income"
+                      ? "Ex.: Bolsa de estágio, Salário..."
+                      : "Ex.: Aluguel, Internet..."
+                  }
+                  className="w-full min-h-[44px] bg-[#19152B] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-400 font-medium block mb-1">
+                    Valor mensal (R$)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={
+                      fixedModalType === "income" ? incomeAmount : expenseAmount
+                    }
+                    onChange={(e) =>
+                      fixedModalType === "income"
+                        ? setIncomeAmount(e.target.value)
+                        : setExpenseAmount(e.target.value)
+                    }
+                    placeholder="R$ 0,00"
+                    className="w-full min-h-[44px] bg-[#19152B] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-400 font-medium block mb-1">
+                    Vencimento
+                  </label>
+                  <select
+                    value={
+                      fixedModalType === "income" ? incomeDueDay : expenseDueDay
+                    }
+                    onChange={(e) =>
+                      fixedModalType === "income"
+                        ? setIncomeDueDay(e.target.value)
+                        : setExpenseDueDay(e.target.value)
+                    }
+                    className="w-full min-h-[44px] bg-[#19152B] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#D6B2FF] cursor-pointer"
+                  >
+                    <option value="Dia 01">Dia 01</option>
+                    <option value="Dia 05">Dia 05</option>
+                    <option value="Dia 10">Dia 10</option>
+                    <option value="Dia 15">Dia 15</option>
+                    <option value="Dia 20">Dia 20</option>
+                    <option value="Dia 25">Dia 25</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setFixedModalType(null)}
+                  className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className={`min-h-[44px] px-5 py-2.5 rounded-xl font-bold text-xs text-[#0B0914] flex items-center gap-1.5 transition-all cursor-pointer ${fixedModalType === "income"
+                      ? "bg-[#4DE8B3] hover:brightness-110"
+                      : "bg-[#FF85A1] hover:brightness-110"
+                    }`}
+                >
+                  <Plus size={15} strokeWidth={2.5} />
+                  <span>
+                    {fixedModalType === "income"
+                      ? "Adicionar Receita"
+                      : "Adicionar Despesa"}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 5. MODAL: TODAS AS TRANSAÇÕES */}
       {showAllTransactionsModal && (
@@ -1418,31 +2250,28 @@ export default function PlanejamentoPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setModalFilter("all")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  modalFilter === "all"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${modalFilter === "all"
                     ? "bg-[#D6B2FF] text-[#0B0914]"
                     : "bg-[#19152B] text-zinc-400 hover:text-white"
-                }`}
+                  }`}
               >
                 Todas ({transactions.length})
               </button>
               <button
                 onClick={() => setModalFilter("income")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  modalFilter === "income"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${modalFilter === "income"
                     ? "bg-[#4DE8B3] text-[#0B0914]"
                     : "bg-[#19152B] text-zinc-400 hover:text-white"
-                }`}
+                  }`}
               >
                 Receitas ({transactions.filter((t) => t.type === "income").length})
               </button>
               <button
                 onClick={() => setModalFilter("expense")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  modalFilter === "expense"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${modalFilter === "expense"
                     ? "bg-[#FF85A1] text-[#0B0914]"
                     : "bg-[#19152B] text-zinc-400 hover:text-white"
-                }`}
+                  }`}
               >
                 Despesas ({transactions.filter((t) => t.type === "expense").length})
               </button>
@@ -1489,9 +2318,8 @@ export default function PlanejamentoPage() {
 
                     <div className="flex items-center gap-4">
                       <span
-                        className={`text-sm font-bold ${
-                          tx.amount > 0 ? "text-[#4DE8B3]" : "text-[#FF85A1]"
-                        }`}
+                        className={`text-sm font-bold ${tx.amount > 0 ? "text-[#4DE8B3]" : "text-[#FF85A1]"
+                          }`}
                       >
                         {tx.amount > 0
                           ? `+ ${formatCurrency(tx.amount)}`
@@ -1577,13 +2405,12 @@ export default function PlanejamentoPage() {
                     <button
                       key={day}
                       onClick={() => setSelectedCalendarDay(day)}
-                      className={`h-9 rounded-lg flex flex-col items-center justify-center font-medium transition-all cursor-pointer relative ${
-                        isSelected
+                      className={`h-9 rounded-lg flex flex-col items-center justify-center font-medium transition-all cursor-pointer relative ${isSelected
                           ? "bg-[#D6B2FF] text-[#0B0914] font-bold shadow-md shadow-purple-950/40"
                           : hasDue
-                          ? "bg-[#9D4EDD]/20 text-white border border-[#9D4EDD]/40 hover:bg-[#9D4EDD]/30"
-                          : "text-zinc-400 hover:bg-white/5"
-                      }`}
+                            ? "bg-[#9D4EDD]/20 text-white border border-[#9D4EDD]/40 hover:bg-[#9D4EDD]/30"
+                            : "text-zinc-400 hover:bg-white/5"
+                        }`}
                     >
                       <span>{day}</span>
                       {hasDue && !isSelected && (
@@ -1833,6 +2660,158 @@ export default function PlanejamentoPage() {
                 >
                   <Plus size={13} />
                   Adicionar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 8. MODAL CENTRALIZADO: CADASTRAR NOVA META DE GASTOS */}
+      {showNewGoalModal && (
+        <div
+          onClick={() => setShowNewGoalModal(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-[#131024] border border-white/10 p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+          >
+            {/* Cabeçalho do Modal */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#D6B2FF]/10 border border-[#D6B2FF]/25 text-[#D6B2FF] flex items-center justify-center">
+                  <Target size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white leading-tight">
+                    Cadastrar Nova Meta de Gastos
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Defina o teto orçamentário mensal por categoria
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowNewGoalModal(false)}
+                aria-label="Fechar modal"
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-zinc-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Sugestões Rápidas de Categorias */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-medium block">
+                Sugestões rápidas de categorias
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Saúde & Farmácia",
+                  "Vestuário & Roupas",
+                  "Projetos Acadêmicos",
+                  "Viagens & Congressos",
+                  "Tecnologia & Gadgets",
+                  "Streaming & Nuvem",
+                ].map((sug) => (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => setGoalCategoryName(sug)}
+                    className="px-2.5 py-1 rounded-lg bg-[#19152B] hover:bg-[#D6B2FF]/15 border border-white/5 hover:border-[#D6B2FF]/30 text-[11px] text-zinc-300 hover:text-[#D6B2FF] transition-all cursor-pointer"
+                  >
+                    + {sug}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Formulário de Criação da Meta */}
+            <form onSubmit={handleCreateGoal} className="space-y-3.5 pt-1">
+              <div>
+                <label className="text-xs text-zinc-400 font-medium block mb-1">
+                  Nome da Categoria <span className="text-[#FF85A1]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={goalCategoryName}
+                  onChange={(e) => setGoalCategoryName(e.target.value)}
+                  placeholder="Ex.: Saúde & Farmácia"
+                  className="w-full min-h-[44px] bg-[#19152B] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-400 font-medium block mb-1">
+                  Teto da Meta Mensal (R$) <span className="text-[#FF85A1]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={goalTargetAmount}
+                  onChange={(e) => setGoalTargetAmount(e.target.value)}
+                  placeholder="R$ 0,00 (Ex: 250,00)"
+                  className="w-full min-h-[44px] bg-[#19152B] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-400 font-medium block mb-1">
+                    Gasto Atual (R$)
+                  </label>
+                  <input
+                    type="text"
+                    value={goalCurrentAmount}
+                    onChange={(e) => setGoalCurrentAmount(e.target.value)}
+                    placeholder="R$ 0,00 (Opcional)"
+                    className="w-full min-h-[44px] bg-[#19152B] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-400 font-medium block mb-1">
+                    Mês Anterior (R$)
+                  </label>
+                  <input
+                    type="text"
+                    value={goalPreviousAmount}
+                    onChange={(e) => setGoalPreviousAmount(e.target.value)}
+                    placeholder="R$ 0,00 (Opcional)"
+                    className="w-full min-h-[44px] bg-[#19152B] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#D6B2FF]"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#19152B]/80 border border-white/5 text-[11px] text-zinc-400 space-y-1">
+                <span className="text-zinc-200 font-medium block">
+                  💡 Como funciona a meta no MANNS:
+                </span>
+                <p>
+                  Sua nova meta será adicionada imediatamente ao carrossel comparativo com as 3
+                  barras horizontais (Gasto Atual vs Meta vs Mês Passado) e sincronizada com o teto
+                  global consolidado.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setShowNewGoalModal(false)}
+                  className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="min-h-[44px] px-5 py-2.5 rounded-xl font-bold text-xs bg-[#D6B2FF] hover:bg-[#c79efc] text-[#0B0914] flex items-center gap-1.5 transition-all shadow-md shadow-purple-950/30 cursor-pointer active:scale-95"
+                >
+                  <Target size={15} strokeWidth={2.5} />
+                  <span>Cadastrar Meta</span>
                 </button>
               </div>
             </form>

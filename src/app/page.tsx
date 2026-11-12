@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useTheme } from "@/components/theme-provider";
 import {
   Bell,
   ArrowDown,
@@ -70,9 +71,15 @@ interface ExpenseItem {
   amount: number;
   date: string;
   paymentMethod: string;
+  cardId?: string;
+  installments?: number;
+  totalPurchaseAmount?: number;
 }
 
 export default function VisaoGeralPage() {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
   // Estado das Contas Bancárias (Exclusivamente Contas com Saldo Líquido)
   const [accounts, setAccounts] = useState<Account[]>([
     {
@@ -188,9 +195,10 @@ export default function VisaoGeralPage() {
         id: "exp-a1",
         categoryId: "alimentacao",
         description: "Supermercado do Mês (Feira & Básicos)",
-        amount: 245.0,
+        amount: 147.6,
         date: "08 de nov.",
         paymentMethod: "Cartão Nubank •••• 4821",
+        cardId: "card-nubank",
       },
       {
         id: "exp-a2",
@@ -204,17 +212,19 @@ export default function VisaoGeralPage() {
         id: "exp-a3",
         categoryId: "alimentacao",
         description: "Lanches rápidos no Centro de Convivência",
-        amount: 52.0,
+        amount: 57.0,
         date: "12 de nov.",
         paymentMethod: "Cartão Nubank •••• 4821",
+        cardId: "card-nubank",
       },
       {
         id: "exp-a4",
         categoryId: "alimentacao",
         description: "Padaria e café no campus",
-        amount: 28.0,
+        amount: 50.0,
         date: "17 de nov.",
-        paymentMethod: "Conta Nubank",
+        paymentMethod: "Cartão C6 Standard",
+        cardId: "card-c6",
       },
     ],
     estudos: [
@@ -225,6 +235,7 @@ export default function VisaoGeralPage() {
         amount: 95.0,
         date: "05 de nov.",
         paymentMethod: "Cartão Nubank •••• 4821",
+        cardId: "card-nubank",
       },
       {
         id: "exp-e2",
@@ -241,6 +252,7 @@ export default function VisaoGeralPage() {
         amount: 20.0,
         date: "16 de nov.",
         paymentMethod: "Cartão Nubank •••• 4821",
+        cardId: "card-nubank",
       },
     ],
     outros: [
@@ -251,6 +263,7 @@ export default function VisaoGeralPage() {
         amount: 95.0,
         date: "04 de nov.",
         paymentMethod: "Cartão C6 Standard",
+        cardId: "card-c6",
       },
       {
         id: "exp-o2",
@@ -259,6 +272,7 @@ export default function VisaoGeralPage() {
         amount: 48.5,
         date: "14 de nov.",
         paymentMethod: "Cartão Nubank •••• 4821",
+        cardId: "card-nubank",
       },
       {
         id: "exp-o3",
@@ -267,6 +281,7 @@ export default function VisaoGeralPage() {
         amount: 11.9,
         date: "16 de nov.",
         paymentMethod: "Cartão Nubank •••• 4821",
+        cardId: "card-nubank",
       },
       {
         id: "exp-o4",
@@ -315,6 +330,32 @@ export default function VisaoGeralPage() {
   );
   const [showNotifications, setShowNotifications] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [activeAccountSlide, setActiveAccountSlide] = useState(0);
+  const accountsCarouselRef = useRef<HTMLDivElement>(null);
+
+  const handleAccountsScroll = () => {
+    const el = accountsCarouselRef.current;
+    if (!el) return;
+    const firstCard = el.firstElementChild as HTMLElement | null;
+    if (!firstCard) return;
+    const step = firstCard.offsetWidth + 16;
+    const index = Math.round(el.scrollLeft / step);
+    setActiveAccountSlide(
+      Math.max(0, Math.min(accounts.length - 1, index))
+    );
+  };
+
+  const scrollToAccountSlide = (index: number) => {
+    const el = accountsCarouselRef.current;
+    if (!el) return;
+    const targetCard = el.children[index] as HTMLElement | undefined;
+    if (!targetCard) return;
+    el.scrollTo({
+      left: targetCard.offsetLeft - el.offsetLeft,
+      behavior: "smooth",
+    });
+    setActiveAccountSlide(index);
+  };
 
   // Estado do Modal de Detalhes da Categoria (aberto ao clicar)
   const [selectedCategoryModal, setSelectedCategoryModal] =
@@ -323,16 +364,23 @@ export default function VisaoGeralPage() {
   const [newCatExpenseAmount, setNewCatExpenseAmount] = useState("");
   const [newCatExpensePaymentMethod, setNewCatExpensePaymentMethod] =
     useState("Conta Nubank");
+  const [newCatExpenseInstallments, setNewCatExpenseInstallments] =
+    useState(1);
 
   // Estados dos Modais de Transação
   const [modalType, setModalType] = useState<"receita" | "despesa" | null>(null);
   const [amountInput, setAmountInput] = useState("");
+  const [descriptionInput, setDescriptionInput] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("nubank");
   const [selectedCategoryId, setSelectedCategoryId] = useState("alimentacao");
+  const [installmentsCount, setInstallmentsCount] = useState<number>(1);
 
-  // Estados de Pagamento e Ajuste de Limite de Cartão
+  // Estados de Pagamento, Detalhes e Ajustes de Cartão
   const [selectedCardForAction, setSelectedCardForAction] =
     useState<string>("card-nubank");
+  const [selectedCardDetailsId, setSelectedCardDetailsId] = useState<
+    string | null
+  >(null);
   const [showPayInvoiceModal, setShowPayInvoiceModal] = useState(false);
   const [payingAccount, setPayingAccount] = useState("nubank");
   const [payAmountType, setPayAmountType] = useState<"total" | "custom">("total");
@@ -340,6 +388,11 @@ export default function VisaoGeralPage() {
 
   const [showAdjustLimitModal, setShowAdjustLimitModal] = useState(false);
   const [tempLimit, setTempLimit] = useState(1000);
+  const [editCardName, setEditCardName] = useState("");
+  const [editCardBrand, setEditCardBrand] = useState("Mastercard");
+  const [editCardLastDigits, setEditCardLastDigits] = useState("");
+  const [editCardClosingDay, setEditCardClosingDay] = useState("");
+  const [editCardDueDay, setEditCardDueDay] = useState("");
 
   const [showNewCardModal, setShowNewCardModal] = useState(false);
   const [newCardName, setNewCardName] = useState("");
@@ -412,24 +465,36 @@ export default function VisaoGeralPage() {
       );
       showToast(`Receita de ${formatCurrency(numericValue)} adicionada com sucesso!`);
     } else if (modalType === "despesa") {
+      const isCreditCard = selectedAccountId.startsWith("card-");
+      const activeInstallments = isCreditCard ? Math.max(1, installmentsCount) : 1;
+      const monthlyInstallmentValue = Number(
+        (numericValue / activeInstallments).toFixed(2)
+      );
       let paymentDesc = "";
 
-      if (selectedAccountId.startsWith("card-")) {
+      if (isCreditCard) {
         const foundCard = creditCards.find((c) => c.id === selectedAccountId);
-        paymentDesc = foundCard ? `Cartão ${foundCard.name}` : "Cartão de Crédito";
+        const cardTitle = foundCard ? `Cartão ${foundCard.name}` : "Cartão de Crédito";
+        paymentDesc =
+          activeInstallments > 1
+            ? `${cardTitle} (${activeInstallments}x de ${formatCurrency(monthlyInstallmentValue)})`
+            : `${cardTitle} (À vista)`;
 
+        // O limite do cartão é comprometido pelo valor total da compra
         setCreditCards((prev) =>
           prev.map((c) =>
             c.id === selectedAccountId
               ? {
-                  ...c,
-                  usedLimit: c.usedLimit + numericValue,
-                }
+                ...c,
+                usedLimit: c.usedLimit + numericValue,
+              }
               : c
           )
         );
         showToast(
-          `Despesa de ${formatCurrency(numericValue)} lançada no cartão!`
+          activeInstallments > 1
+            ? `Compra parcelada em ${activeInstallments}x de ${formatCurrency(monthlyInstallmentValue)} lançada no cartão!`
+            : `Despesa de ${formatCurrency(numericValue)} lançada no cartão!`
         );
       } else {
         const foundAcc = accounts.find((a) => a.id === selectedAccountId);
@@ -447,16 +512,27 @@ export default function VisaoGeralPage() {
         );
       }
 
-      // Adiciona o novo gasto na lista detalhada da respectiva categoria
+      const categoryLabel =
+        categories.find((cat) => cat.id === selectedCategoryId)?.name ||
+        "Nova despesa";
+      const baseDescription = descriptionInput.trim()
+        ? descriptionInput.trim()
+        : `${categoryLabel} (Novo gasto)`;
+
+      // Adiciona o novo gasto na lista detalhada da respectiva categoria (no mês, contabiliza a 1ª parcela se parcelado)
       const newExpense: ExpenseItem = {
         id: `exp-${Date.now()}`,
         categoryId: selectedCategoryId,
         description:
-          categories.find((cat) => cat.id === selectedCategoryId)?.name + " (Novo gasto)" ||
-          "Nova despesa cadastrada",
-        amount: numericValue,
+          activeInstallments > 1
+            ? `${baseDescription} (1/${activeInstallments})`
+            : baseDescription,
+        amount: monthlyInstallmentValue,
         date: "Hoje",
         paymentMethod: paymentDesc,
+        cardId: isCreditCard ? selectedAccountId : undefined,
+        installments: activeInstallments > 1 ? activeInstallments : undefined,
+        totalPurchaseAmount: activeInstallments > 1 ? numericValue : undefined,
       };
 
       setCategoryExpenses((prev) => ({
@@ -464,11 +540,11 @@ export default function VisaoGeralPage() {
         [selectedCategoryId]: [newExpense, ...(prev[selectedCategoryId] || [])],
       }));
 
-      // Atualiza o total consolidado da categoria
+      // Atualiza o total consolidado da categoria no mês (valor da parcela atual)
       setCategories((prev) =>
         prev.map((cat) =>
           cat.id === selectedCategoryId
-            ? { ...cat, amount: cat.amount + numericValue }
+            ? { ...cat, amount: Math.round(cat.amount + monthlyInstallmentValue) }
             : cat
         )
       );
@@ -482,13 +558,17 @@ export default function VisaoGeralPage() {
       if (targetBudgetId) {
         setBudgets((prev) =>
           prev.map((b) =>
-            b.id === targetBudgetId ? { ...b, spent: b.spent + numericValue } : b
+            b.id === targetBudgetId
+              ? { ...b, spent: Math.round(b.spent + monthlyInstallmentValue) }
+              : b
           )
         );
       }
     }
 
     setAmountInput("");
+    setDescriptionInput("");
+    setInstallmentsCount(1);
     setModalType(null);
   };
 
@@ -522,10 +602,10 @@ export default function VisaoGeralPage() {
       prev.map((c) =>
         c.id === selectedCardForAction
           ? {
-              ...c,
-              usedLimit: Math.max(0, c.usedLimit - amountToPay),
-              status: c.usedLimit - amountToPay <= 0 ? "paga" : "aberta",
-            }
+            ...c,
+            usedLimit: Math.max(0, c.usedLimit - amountToPay),
+            status: c.usedLimit - amountToPay <= 0 ? "paga" : "aberta",
+          }
           : c
       )
     );
@@ -537,17 +617,46 @@ export default function VisaoGeralPage() {
     );
   };
 
-  // Ajuste do Limite do Cartão Selecionado
-  const handleSaveLimit = () => {
+  // Ajuste dos Dados e Limite do Cartão Selecionado
+  const openCardSettingsModal = (card: CreditCardData) => {
+    setSelectedCardForAction(card.id);
+    setTempLimit(card.totalLimit);
+    setEditCardName(card.name);
+    setEditCardBrand(card.brand);
+    setEditCardLastDigits(card.lastDigits);
+    setEditCardClosingDay(card.closingDay);
+    setEditCardDueDay(card.dueDay);
+    setShowAdjustLimitModal(true);
+  };
+
+  const handleSaveLimit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanedName = editCardName.trim() || activeCardForModal.name;
+    const cleanedDigits =
+      editCardLastDigits.replace(/\D/g, "").slice(-4) ||
+      activeCardForModal.lastDigits;
+    const cleanedClosing =
+      editCardClosingDay.trim() || activeCardForModal.closingDay;
+    const cleanedDue = editCardDueDay.trim() || activeCardForModal.dueDay;
+
     setCreditCards((prev) =>
       prev.map((c) =>
-        c.id === selectedCardForAction ? { ...c, totalLimit: tempLimit } : c
+        c.id === selectedCardForAction
+          ? {
+            ...c,
+            name: cleanedName,
+            bank: cleanedName.split(" ")[0] || c.bank,
+            brand: editCardBrand,
+            lastDigits: cleanedDigits,
+            closingDay: cleanedClosing,
+            dueDay: cleanedDue,
+            totalLimit: tempLimit,
+          }
+          : c
       )
     );
     setShowAdjustLimitModal(false);
-    showToast(
-      `Limite do ${activeCardForModal.name} ajustado para ${formatCurrency(tempLimit, false)}!`
-    );
+    showToast(`Dados e limite do cartão "${cleanedName}" atualizados!`);
   };
 
   // Criação de Novo Cartão
@@ -588,14 +697,49 @@ export default function VisaoGeralPage() {
       return;
     }
 
+    const isCardMethod = newCatExpensePaymentMethod.startsWith("Cartão");
+    const activeInstallments = isCardMethod
+      ? Math.max(1, newCatExpenseInstallments)
+      : 1;
+    const monthlyInstallmentValue = Number(
+      (cleanAmount / activeInstallments).toFixed(2)
+    );
+
+    const formattedPaymentMethod =
+      isCardMethod && activeInstallments > 1
+        ? `${newCatExpensePaymentMethod} (${activeInstallments}x de ${formatCurrency(monthlyInstallmentValue)})`
+        : newCatExpensePaymentMethod;
+
+    const targetCardId = isCardMethod
+      ? newCatExpensePaymentMethod.includes("C6")
+        ? "card-c6"
+        : "card-nubank"
+      : undefined;
+
     const newItem: ExpenseItem = {
       id: `exp-${Date.now()}`,
       categoryId: selectedCategoryModal.id,
-      description: newCatExpenseDesc.trim(),
-      amount: cleanAmount,
+      description:
+        activeInstallments > 1
+          ? `${newCatExpenseDesc.trim()} (1/${activeInstallments})`
+          : newCatExpenseDesc.trim(),
+      amount: monthlyInstallmentValue,
       date: "Hoje",
-      paymentMethod: newCatExpensePaymentMethod,
+      paymentMethod: formattedPaymentMethod,
+      cardId: targetCardId,
+      installments: activeInstallments > 1 ? activeInstallments : undefined,
+      totalPurchaseAmount: activeInstallments > 1 ? cleanAmount : undefined,
     };
+
+    if (isCardMethod && targetCardId) {
+      setCreditCards((prev) =>
+        prev.map((c) =>
+          c.id === targetCardId
+            ? { ...c, usedLimit: c.usedLimit + cleanAmount }
+            : c
+        )
+      );
+    }
 
     const catId = selectedCategoryModal.id;
     const updatedList = [newItem, ...(categoryExpenses[catId] || [])];
@@ -608,13 +752,20 @@ export default function VisaoGeralPage() {
     // Atualiza o total consolidado da categoria
     setCategories((prev) =>
       prev.map((cat) =>
-        cat.id === catId ? { ...cat, amount: Math.round(cat.amount + cleanAmount) } : cat
+        cat.id === catId
+          ? { ...cat, amount: Math.round(cat.amount + monthlyInstallmentValue) }
+          : cat
       )
     );
 
     setNewCatExpenseDesc("");
     setNewCatExpenseAmount("");
-    showToast(`Gasto "${newItem.description}" adicionado a ${selectedCategoryModal.name}!`);
+    setNewCatExpenseInstallments(1);
+    showToast(
+      activeInstallments > 1
+        ? `Compra parcelada em ${activeInstallments}x de ${formatCurrency(monthlyInstallmentValue)} adicionada a ${selectedCategoryModal.name}!`
+        : `Gasto "${newItem.description}" adicionado a ${selectedCategoryModal.name}!`
+    );
   };
 
   const handleRemoveCategoryExpense = (catId: string, expenseId: string) => {
@@ -633,6 +784,17 @@ export default function VisaoGeralPage() {
           cat.id === catId ? { ...cat, amount: Math.max(0, cat.amount - itemToRemove.amount) } : cat
         )
       );
+      if (itemToRemove.cardId) {
+        const limitToRestore =
+          itemToRemove.totalPurchaseAmount ?? itemToRemove.amount;
+        setCreditCards((prev) =>
+          prev.map((c) =>
+            c.id === itemToRemove.cardId
+              ? { ...c, usedLimit: Math.max(0, c.usedLimit - limitToRestore) }
+              : c
+          )
+        );
+      }
       showToast(`Gasto "${itemToRemove.description}" removido.`);
     }
   };
@@ -657,9 +819,6 @@ export default function VisaoGeralPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
               Bom dia, Arthur
             </h1>
-            <p className="text-xs text-zinc-400 mt-1">
-              Resumo financeiro e acompanhamento de metas para estudantes
-            </p>
           </div>
 
           {/* Botão de Notificações no Mobile (alinhado ao topo direito da saudação) */}
@@ -717,7 +876,7 @@ export default function VisaoGeralPage() {
             onClick={() => setModalType("receita")}
             className="flex-1 md:flex-initial min-h-[44px] flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-[#131022] border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.04] hover:border-white/20 transition-all cursor-pointer"
           >
-            <ArrowDown size={15} className="text-zinc-300 shrink-0" />
+            <ArrowUp size={15} className="text-zinc-300 shrink-0" />
             <span>Adicionar Receita</span>
           </button>
 
@@ -726,7 +885,8 @@ export default function VisaoGeralPage() {
             onClick={() => setModalType("despesa")}
             className="flex-1 md:flex-initial min-h-[44px] flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold shadow-[0_0_25px_rgba(77,232,179,0.35)] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
           >
-            <ArrowUp size={15} strokeWidth={2.5} className="shrink-0" />
+
+            <ArrowDown size={15} strokeWidth={2.5} className="shrink-0" />
             <span>Adicionar Despesa</span>
           </button>
         </div>
@@ -753,20 +913,36 @@ export default function VisaoGeralPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+        {/* Carrossel Horizontal no Mobile • Grid 3 Colunas no Desktop */}
+        <div
+          ref={accountsCarouselRef}
+          onScroll={handleAccountsScroll}
+          className="flex md:grid md:grid-cols-3 gap-4 md:gap-5 overflow-x-auto md:overflow-visible snap-x snap-mandatory scroll-smooth -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
           {accounts.map((acc) => (
             <div
               key={acc.id}
+              data-account-card
               style={{
-                background: `radial-gradient(circle at 90% 90%, ${acc.glowColor}, transparent 60%), #131022`,
+                background: isLight
+                  ? `radial-gradient(circle at 90% 90%, ${acc.glowColor}, transparent 60%), #FFFFFF`
+                  : `radial-gradient(circle at 90% 90%, ${acc.glowColor}, transparent 60%), #131022`,
               }}
-              className="rounded-2xl border border-white/[0.07] p-5 sm:p-6 flex flex-col justify-between min-h-[160px] md:min-h-[170px] hover:border-white/15 transition-all group"
+              className="account-card min-w-[84%] sm:min-w-[300px] md:min-w-0 shrink-0 snap-center rounded-2xl border border-white/[0.07] p-5 sm:p-6 flex flex-col justify-between min-h-[160px] md:min-h-[170px] hover:border-white/15 transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span
                     className="text-sm font-bold tracking-tight"
-                    style={{ color: acc.badgeColor }}
+                    style={{
+                      color: isLight
+                        ? acc.id === "bb"
+                          ? "#D97706"
+                          : acc.id === "nubank"
+                          ? "#7C3AED"
+                          : "#0284C7"
+                        : acc.badgeColor,
+                    }}
                   >
                     {acc.badge}
                   </span>
@@ -797,13 +973,44 @@ export default function VisaoGeralPage() {
                 <span className="text-zinc-500 font-medium">{acc.bankName}</span>
                 <span
                   className="font-semibold"
-                  style={{ color: acc.footerRightColor }}
+                  style={{
+                    color: isLight
+                      ? acc.id === "nubank"
+                        ? "#059669"
+                        : acc.id === "inter"
+                        ? "#0284C7"
+                        : "#D97706"
+                      : acc.footerRightColor,
+                  }}
                 >
                   {acc.footerRight}
                 </span>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Indicadores do Carrossel (Visíveis apenas no Mobile) */}
+        <div className="flex md:hidden items-center justify-center gap-1.5 pt-1">
+          {accounts.map((acc, idx) => {
+            const isActive = activeAccountSlide === idx;
+            return (
+              <button
+                key={acc.id}
+                type="button"
+                onClick={() => scrollToAccountSlide(idx)}
+                aria-label={`Ir para conta ${acc.bankName}`}
+                className="py-2 px-1 flex items-center justify-center cursor-pointer"
+              >
+                <span
+                  className={`h-1.5 rounded-full transition-all duration-300 ${isActive
+                      ? "w-6 bg-[#4DE8B3] shadow-[0_0_8px_#4DE8B3]"
+                      : "w-1.5 bg-white/20"
+                    }`}
+                />
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -841,7 +1048,7 @@ export default function VisaoGeralPage() {
           </div>
         </div>
 
-        {/* Lista Minimalista: Um Cartão Abaixo do Outro */}
+        {/* Lista Minimalista: Um Cartão Abaixo do Outro (Clique abre todas as compras e opções) */}
         <div className="divide-y divide-white/[0.06]">
           {creditCards.map((card) => {
             const availLimit = Math.max(0, card.totalLimit - card.usedLimit);
@@ -854,39 +1061,59 @@ export default function VisaoGeralPage() {
             return (
               <div
                 key={card.id}
-                className="py-3.5 first:pt-1 last:pb-1 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-6 hover:bg-white/[0.015] -mx-2 px-2 rounded-xl transition-all"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setSelectedCardForAction(card.id);
+                  setSelectedCardDetailsId(card.id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedCardForAction(card.id);
+                    setSelectedCardDetailsId(card.id);
+                  }
+                }}
+                className="py-3.5 first:pt-1 last:pb-1 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-6 hover:bg-white/[0.03] -mx-2 px-3 rounded-xl transition-all cursor-pointer group"
               >
                 {/* 1. Nome do Cartão e Status da Fatura */}
-                <div className="flex items-center gap-3 min-w-[220px]">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-white/10"
-                    style={{
-                      backgroundColor: `${card.color}18`,
-                      color: card.accentColor,
-                    }}
-                  >
-                    <CreditCard size={15} />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-white">
-                        {card.name}
-                      </span>
-                      <span className="text-[11px] text-zinc-500 font-mono">
-                        •• {card.lastDigits}
-                      </span>
+                <div className="flex items-center justify-between md:justify-start gap-3 min-w-[220px]">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
+                      style={{
+                        backgroundColor: `${card.color}18`,
+                        color: card.accentColor,
+                      }}
+                    >
+                      <CreditCard size={16} />
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
-                      <span className="flex items-center gap-1 text-[#FFD166] font-medium">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FFD166] animate-pulse" />
-                        Fatura aberta
-                      </span>
-                      <span className="text-zinc-600">•</span>
-                      <span className="text-zinc-400">Vence {card.dueDay}</span>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white group-hover:text-[#D6B2FF] transition-colors">
+                          {card.name}
+                        </span>
+                        <span className="text-[11px] text-zinc-500 font-mono">
+                          •• {card.lastDigits}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
+                        <span className="flex items-center gap-1 text-[#FFD166] font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#FFD166] animate-pulse" />
+                          {card.status === "paga" ? "Fatura paga" : "Fatura aberta"}
+                        </span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-zinc-400">Vence {card.dueDay}</span>
+                      </div>
                     </div>
                   </div>
+
+                  <ChevronRight
+                    size={16}
+                    className="md:hidden text-zinc-500 group-hover:text-white transition-colors"
+                  />
                 </div>
 
                 {/* 2. Barra de Limite Usado e Disponível */}
@@ -934,32 +1161,13 @@ export default function VisaoGeralPage() {
                   </div>
                 </div>
 
-                {/* 3. Ações Rápidas Discretas */}
-                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end pt-1 md:pt-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCardForAction(card.id);
-                      setShowPayInvoiceModal(true);
-                    }}
-                    className="min-h-[44px] flex-1 md:flex-initial px-4 py-2 rounded-xl bg-[#4DE8B3]/10 hover:bg-[#4DE8B3]/20 border border-[#4DE8B3]/25 text-xs font-semibold text-[#4DE8B3] transition-colors cursor-pointer flex items-center justify-center"
-                  >
-                    Pagar fatura
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCardForAction(card.id);
-                      setTempLimit(card.totalLimit);
-                      setShowAdjustLimitModal(true);
-                    }}
-                    title="Ajustar limite"
-                    aria-label={`Ajustar limite do cartão ${card.name}`}
-                    className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
-                  >
-                    <SlidersHorizontal size={16} />
-                  </button>
+                {/* 3. Indicador Discreto para Ver Compras e Ajustes */}
+                <div className="hidden md:flex items-center gap-1.5 text-xs text-zinc-400 group-hover:text-white shrink-0">
+                  <span>Ver compras</span>
+                  <ChevronRight
+                    size={15}
+                    className="group-hover:translate-x-0.5 transition-transform"
+                  />
                 </div>
               </div>
             );
@@ -1001,11 +1209,10 @@ export default function VisaoGeralPage() {
                         setSelectedMonth(mes);
                         setIsMonthOpen(false);
                       }}
-                      className={`w-full min-h-[44px] flex items-center text-left px-4 py-2 text-xs transition-colors cursor-pointer ${
-                        selectedMonth === mes
+                      className={`w-full min-h-[44px] flex items-center text-left px-4 py-2 text-xs transition-colors cursor-pointer ${selectedMonth === mes
                           ? "text-[#4DE8B3] font-semibold bg-white/5"
                           : "text-zinc-300 hover:bg-white/5"
-                      }`}
+                        }`}
                     >
                       {mes}
                     </button>
@@ -1101,11 +1308,10 @@ export default function VisaoGeralPage() {
                         }}
                       />
                       <span
-                        className={`text-xs transition-colors ${
-                          isHovered
+                        className={`text-xs transition-colors ${isHovered
                             ? "text-white font-semibold"
                             : "text-zinc-200 font-medium group-hover:text-white"
-                        }`}
+                          }`}
                       >
                         {cat.name}
                       </span>
@@ -1217,15 +1423,12 @@ export default function VisaoGeralPage() {
       {modalType && (
         <div
           onClick={() => setModalType(null)}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto"
           >
-            {/* Pílula visual do Bottom Sheet no Mobile */}
-            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
-
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white">
                 {modalType === "receita"
@@ -1243,9 +1446,26 @@ export default function VisaoGeralPage() {
             </div>
 
             <form onSubmit={handleTransactionSubmit} className="space-y-4">
+              {modalType === "despesa" && (
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1.5">
+                    Descrição da Compra (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Fone Bluetooth, Livro de Cálculo..."
+                    value={descriptionInput}
+                    onChange={(e) => setDescriptionInput(e.target.value)}
+                    className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#4DE8B3]"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="text-xs text-zinc-400 block mb-1.5">
-                  Valor (R$)
+                  {modalType === "despesa" && selectedAccountId.startsWith("card-")
+                    ? "Valor Total da Compra (R$)"
+                    : "Valor (R$)"}
                 </label>
                 <input
                   type="number"
@@ -1264,7 +1484,13 @@ export default function VisaoGeralPage() {
                 </label>
                 <select
                   value={selectedAccountId}
-                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    setSelectedAccountId(nextId);
+                    if (!nextId.startsWith("card-")) {
+                      setInstallmentsCount(1);
+                    }
+                  }}
                   className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
                 >
                   <optgroup label="Contas Bancárias">
@@ -1285,6 +1511,49 @@ export default function VisaoGeralPage() {
                   )}
                 </select>
               </div>
+
+              {/* Opção de Parcelamento no Cartão de Crédito */}
+              {modalType === "despesa" && selectedAccountId.startsWith("card-") && (
+                <div className="p-3.5 rounded-xl bg-[#19152B] border border-[#9D4EDD]/30 space-y-2.5">
+                  <label className="text-xs font-semibold text-[#D6B2FF] flex items-center gap-1.5">
+                    <CreditCard size={14} className="text-[#D6B2FF]" />
+                    <span>Número de Parcelas</span>
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    max="48"
+                    required
+                    value={installmentsCount}
+                    onChange={(e) =>
+                      setInstallmentsCount(
+                        Math.max(1, parseInt(e.target.value, 10) || 1)
+                      )
+                    }
+                    placeholder="Ex: 1, 3, 10..."
+                    className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#D6B2FF]"
+                  />
+
+                  {(() => {
+                    const parsedTotal = parseFloat(amountInput.replace(",", "."));
+                    if (isNaN(parsedTotal) || parsedTotal <= 0) return null;
+                    const installmentValue = parsedTotal / installmentsCount;
+                    return (
+                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/5 text-zinc-300">
+                        <span>
+                          {installmentsCount > 1
+                            ? `${installmentsCount}x de ${formatCurrency(installmentValue)} (1ª parcela nesta fatura)`
+                            : "Pagamento em 1x à vista na fatura"}
+                        </span>
+                        <strong className="text-[#4DE8B3] font-semibold">
+                          {formatCurrency(installmentValue)}
+                        </strong>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
               {modalType === "despesa" && (
                 <div>
@@ -1326,18 +1595,279 @@ export default function VisaoGeralPage() {
         </div>
       )}
 
+      {/* MODAL DETALHES DO CARTÃO (COMPRAS DO CARTÃO + PAGAR FATURA E AJUSTES NO TOPO) */}
+      {selectedCardDetailsId && (() => {
+        const selectedCard =
+          creditCards.find((c) => c.id === selectedCardDetailsId) ||
+          creditCards[0];
+        if (!selectedCard) return null;
+
+        const availLimit = Math.max(
+          0,
+          selectedCard.totalLimit - selectedCard.usedLimit
+        );
+        const uPercent = Math.min(
+          100,
+          Math.round((selectedCard.usedLimit / selectedCard.totalLimit) * 100)
+        );
+        const aPercent = Math.max(0, 100 - uPercent);
+
+        // Reúne todas as compras vinculadas a este cartão em todas as categorias
+        const cardPurchases = Object.entries(categoryExpenses).flatMap(
+          ([catId, items]) => {
+            const catObj = categories.find((c) => c.id === catId);
+            return items
+              .filter(
+                (item) =>
+                  item.cardId === selectedCard.id ||
+                  (!item.cardId &&
+                    item.paymentMethod
+                      .toLowerCase()
+                      .includes(selectedCard.bank.toLowerCase()))
+              )
+              .map((item) => ({
+                ...item,
+                categoryName: catObj?.name || "Outros",
+                categoryColor: catObj?.color || "#D6B2FF",
+              }));
+          }
+        );
+
+        return (
+          <div
+            onClick={() => setSelectedCardDetailsId(null)}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#131024] p-5 sm:p-6 shadow-2xl flex flex-col max-h-[85vh]"
+            >
+              {/* Parte Superior: Identificação do Cartão + Botões Pagar Fatura e Ajustes */}
+              <div className="flex flex-col gap-4 pb-4 border-b border-white/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-white/10"
+                      style={{
+                        backgroundColor: `${selectedCard.color}20`,
+                        color: selectedCard.accentColor,
+                      }}
+                    >
+                      <CreditCard size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base sm:text-lg font-bold text-white">
+                          {selectedCard.name}
+                        </h3>
+                        <span className="text-xs text-zinc-400 font-mono">
+                          •• {selectedCard.lastDigits}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5">
+                        <span>{selectedCard.brand}</span>
+                        <span>•</span>
+                        <span>Fecha {selectedCard.closingDay}</span>
+                        <span>•</span>
+                        <span className="text-[#FFD166] font-medium">
+                          Vence {selectedCard.dueDay}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCardDetailsId(null)}
+                    aria-label="Fechar detalhes do cartão"
+                    className="min-w-[44px] min-h-[44px] -mr-2 -mt-1 flex items-center justify-center text-zinc-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Botões de Ação na Parte Superior: Pagar Fatura e Ajustes */}
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCardForAction(selectedCard.id);
+                      setShowPayInvoiceModal(true);
+                    }}
+                    className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(77,232,179,0.25)]"
+                  >
+                    <CheckCircle2 size={15} strokeWidth={2.5} />
+                    <span>Pagar fatura</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openCardSettingsModal(selectedCard)}
+                    className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#1C1832] hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <SlidersHorizontal size={15} className="text-[#D6B2FF]" />
+                    <span>Ajustes e dados</span>
+                  </button>
+                </div>
+
+                {/* Resumo de Limite do Cartão */}
+                <div className="p-3.5 rounded-xl bg-[#19152B] border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">
+                      Fatura / Usado:{" "}
+                      <strong className="text-white font-bold">
+                        {formatCurrency(selectedCard.usedLimit)}
+                      </strong>{" "}
+                      <span className="text-[10px] text-zinc-500">
+                        ({uPercent}%)
+                      </span>
+                    </span>
+                    <span className="text-zinc-400">
+                      Disponível:{" "}
+                      <strong className="text-[#4DE8B3] font-bold">
+                        {formatCurrency(availLimit)}
+                      </strong>
+                    </span>
+                  </div>
+
+                  <div className="w-full h-2 rounded-full bg-[#120F20] overflow-hidden flex">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${uPercent}%`,
+                        backgroundColor: selectedCard.color,
+                      }}
+                    />
+                    <div
+                      className="h-full rounded-full transition-all duration-500 opacity-60 ml-0.5"
+                      style={{
+                        width: `${aPercent}%`,
+                        backgroundColor: "#4DE8B3",
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>
+                      Limite total: {formatCurrency(selectedCard.totalLimit)}
+                    </span>
+                    <span>{cardPurchases.length} compras registradas</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de Todas as Compras Feitas Neste Cartão */}
+              <div className="mt-4 flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Compras neste cartão
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedAccountId(selectedCard.id);
+                      setSelectedCardDetailsId(null);
+                      setModalType("despesa");
+                    }}
+                    className="text-[11px] font-semibold text-[#4DE8B3] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Nova compra</span>
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-1 space-y-2 max-h-64 sm:max-h-72">
+                  {cardPurchases.length === 0 ? (
+                    <div className="text-center py-10 px-4 rounded-xl bg-[#19152B]/40 border border-white/5 text-zinc-500 text-xs">
+                      Nenhuma compra lançada neste cartão até o momento.
+                    </div>
+                  ) : (
+                    cardPurchases.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-[#19152B]/70 hover:bg-[#19152B] border border-white/[0.05] transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: item.categoryColor }}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-medium text-white truncate">
+                              {item.description}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[11px] text-zinc-400">
+                              <span>{item.date}</span>
+                              <span>•</span>
+                              <span
+                                className="font-medium"
+                                style={{ color: item.categoryColor }}
+                              >
+                                {item.categoryName}
+                              </span>
+                              {item.installments && item.installments > 1 && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-[#D6B2FF]">
+                                    {item.installments}x (Total:{" "}
+                                    {formatCurrency(
+                                      item.totalPurchaseAmount ??
+                                      item.amount * item.installments
+                                    )}
+                                    )
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right">
+                            <span className="text-xs sm:text-sm font-bold text-white block">
+                              {formatCurrency(item.amount)}
+                            </span>
+                            {item.installments && item.installments > 1 && (
+                              <span className="text-[10px] text-zinc-500 block">
+                                parcela do mês
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRemoveCategoryExpense(
+                                item.categoryId,
+                                item.id
+                              )
+                            }
+                            title="Remover compra"
+                            aria-label={`Remover compra ${item.description}`}
+                            className="min-w-[40px] min-h-[40px] -mr-1 flex items-center justify-center text-zinc-500 hover:text-red-400 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* MODAL 2: PAGAR FATURA DO CARTÃO */}
       {showPayInvoiceModal && (
         <div
           onClick={() => setShowPayInvoiceModal(false)}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto"
           >
-            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
-
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div
@@ -1391,11 +1921,10 @@ export default function VisaoGeralPage() {
                   <button
                     type="button"
                     onClick={() => setPayAmountType("total")}
-                    className={`min-h-[44px] p-3 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer ${
-                      payAmountType === "total"
+                    className={`min-h-[44px] p-3 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer ${payAmountType === "total"
                         ? "border-[#4DE8B3] bg-[#4DE8B3]/10 text-white"
                         : "border-white/10 bg-[#0D0B18] text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <span className="block font-bold">Valor Total</span>
                     <span className="text-[11px] text-[#4DE8B3]">
@@ -1406,11 +1935,10 @@ export default function VisaoGeralPage() {
                   <button
                     type="button"
                     onClick={() => setPayAmountType("custom")}
-                    className={`min-h-[44px] p-3 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer ${
-                      payAmountType === "custom"
+                    className={`min-h-[44px] p-3 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer ${payAmountType === "custom"
                         ? "border-[#4DE8B3] bg-[#4DE8B3]/10 text-white"
                         : "border-white/10 bg-[#0D0B18] text-zinc-400 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <span className="block font-bold">Outro Valor</span>
                     <span className="text-[11px] text-zinc-400">
@@ -1477,18 +2005,16 @@ export default function VisaoGeralPage() {
         </div>
       )}
 
-      {/* MODAL 3: AJUSTAR LIMITE DO CARTÃO */}
+      {/* MODAL 3: AJUSTES E EDIÇÃO DE DADOS DO CARTÃO */}
       {showAdjustLimitModal && (
         <div
           onClick={() => setShowAdjustLimitModal(false)}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto"
           >
-            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
-
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div
@@ -1502,10 +2028,10 @@ export default function VisaoGeralPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">
-                    Ajustar Limite
+                    Ajustes do Cartão
                   </h3>
                   <span className="text-xs text-zinc-400">
-                    {activeCardForModal.name} • Final {activeCardForModal.lastDigits}
+                    Editar dados e limite • Final {activeCardForModal.lastDigits}
                   </span>
                 </div>
               </div>
@@ -1519,55 +2045,138 @@ export default function VisaoGeralPage() {
               </button>
             </div>
 
-            <div className="text-center p-5 rounded-2xl bg-[#1A162B] border border-white/10 space-y-1">
-              <span className="text-xs text-zinc-400">Novo limite total</span>
-              <div className="text-3xl font-extrabold text-white tracking-tight">
-                {formatCurrency(tempLimit, false)}
-              </div>
-              <span className="text-[11px] text-[#4DE8B3] block pt-1">
-                Novo limite disponível:{" "}
-                {formatCurrency(
-                  Math.max(0, tempLimit - activeCardForModal.usedLimit),
-                  false
-                )}
-              </span>
-            </div>
+            <form onSubmit={handleSaveLimit} className="space-y-4">
+              {/* Edição dos Dados Cadastrais do Cartão */}
+              <div className="space-y-3 p-4 rounded-2xl bg-[#1A162B]/80 border border-white/10">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#D6B2FF] block">
+                  Dados do Cartão
+                </span>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>R$ 300</span>
-                <span>R$ 1.800</span>
-              </div>
-              <input
-                type="range"
-                min="300"
-                max="1800"
-                step="50"
-                value={tempLimit}
-                onChange={(e) => setTempLimit(Number(e.target.value))}
-                className="w-full h-6 accent-[#4DE8B3] cursor-pointer"
-              />
-              <span className="text-[11px] text-zinc-500 block text-center">
-                Recomendado para perfil universitário com renda de R$ 1.850
-              </span>
-            </div>
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">
+                    Nome / Apelido do Cartão
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editCardName}
+                    onChange={(e) => setEditCardName(e.target.value)}
+                    placeholder="Ex: Nubank Roxinho"
+                    className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                  />
+                </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAdjustLimitModal(false)}
-                className="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveLimit}
-                className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
-              >
-                Salvar Novo Limite
-              </button>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-zinc-400 block mb-1">
+                      Bandeira
+                    </label>
+                    <select
+                      value={editCardBrand}
+                      onChange={(e) => setEditCardBrand(e.target.value)}
+                      className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:border-[#4DE8B3] cursor-pointer"
+                    >
+                      <option value="Mastercard">Mastercard</option>
+                      <option value="Visa">Visa</option>
+                      <option value="Elo">Elo</option>
+                      <option value="Hipercard">Hipercard</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-zinc-400 block mb-1">
+                      Últimos 4 dígitos
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      required
+                      value={editCardLastDigits}
+                      onChange={(e) => setEditCardLastDigits(e.target.value)}
+                      placeholder="4821"
+                      className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#4DE8B3]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-zinc-400 block mb-1">
+                      Data de fechamento
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCardClosingDay}
+                      onChange={(e) => setEditCardClosingDay(e.target.value)}
+                      placeholder="Ex: 21 nov."
+                      className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-zinc-400 block mb-1">
+                      Data de vencimento
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCardDueDay}
+                      onChange={(e) => setEditCardDueDay(e.target.value)}
+                      placeholder="Ex: 28 nov."
+                      className="w-full min-h-[44px] rounded-xl bg-[#0D0B18] border border-white/10 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#4DE8B3]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Ajuste de Limite do Cartão */}
+              <div className="text-center p-4 rounded-2xl bg-[#1A162B] border border-white/10 space-y-1">
+                <span className="text-xs text-zinc-400">Limite total do cartão</span>
+                <div className="text-2xl font-extrabold text-white tracking-tight">
+                  {formatCurrency(tempLimit, false)}
+                </div>
+                <span className="text-[11px] text-[#4DE8B3] block pt-0.5">
+                  Limite disponível:{" "}
+                  {formatCurrency(
+                    Math.max(0, tempLimit - activeCardForModal.usedLimit),
+                    false
+                  )}
+                </span>
+
+                <div className="space-y-1.5 pt-2">
+                  <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                    <span>R$ 300</span>
+                    <span>R$ 3.000</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="300"
+                    max="3000"
+                    step="50"
+                    value={tempLimit}
+                    onChange={(e) => setTempLimit(Number(e.target.value))}
+                    className="w-full h-6 accent-[#4DE8B3] cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdjustLimitModal(false)}
+                  className="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#4DE8B3] text-[#090812] text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                >
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1576,14 +2185,12 @@ export default function VisaoGeralPage() {
       {showNewCardModal && (
         <div
           onClick={() => setShowNewCardModal(false)}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl md:rounded-2xl bg-[#151226] border-t md:border border-white/10 p-6 pb-8 md:pb-6 shadow-2xl space-y-5 animate-in fade-in slide-in-from-bottom-4 md:zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-2xl bg-[#151226] border border-white/10 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto"
           >
-            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-2 md:hidden" />
-
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white">
                 Adicionar Cartão de Crédito
@@ -1653,14 +2260,12 @@ export default function VisaoGeralPage() {
       {selectedCategoryModal && (
         <div
           onClick={() => setSelectedCategoryModal(null)}
-          className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg rounded-t-3xl md:rounded-2xl border-t md:border border-white/10 bg-[#131024] p-5 sm:p-6 pb-8 md:pb-6 shadow-2xl flex flex-col max-h-[90vh]"
+            className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#131024] p-5 sm:p-6 shadow-2xl flex flex-col max-h-[85vh]"
           >
-            <div className="w-12 h-1.5 bg-white/15 rounded-full mx-auto -mt-1 mb-3 md:hidden shrink-0" />
-
             {/* Cabeçalho do Modal */}
             <div className="flex items-start justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
@@ -1720,7 +2325,7 @@ export default function VisaoGeralPage() {
                   {Math.round(
                     (((categoryExpenses[selectedCategoryModal.id] || []).reduce((acc, curr) => acc + curr.amount, 0)) /
                       totalSpent) *
-                      100
+                    100
                   ) || 0}
                   % do total
                 </span>
@@ -1805,7 +2410,13 @@ export default function VisaoGeralPage() {
                 />
                 <select
                   value={newCatExpensePaymentMethod}
-                  onChange={(e) => setNewCatExpensePaymentMethod(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewCatExpensePaymentMethod(val);
+                    if (!val.startsWith("Cartão")) {
+                      setNewCatExpenseInstallments(1);
+                    }
+                  }}
                   className="sm:col-span-4 min-h-[44px] px-2 py-2 rounded-xl bg-[#19152B] border border-white/5 text-xs text-white focus:outline-none focus:border-[#4DE8B3] cursor-pointer"
                 >
                   <option value="Conta Nubank">Conta Nubank</option>
@@ -1815,6 +2426,26 @@ export default function VisaoGeralPage() {
                   <option value="Cartão C6">Cartão C6</option>
                 </select>
               </div>
+              {newCatExpensePaymentMethod.startsWith("Cartão") && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#19152B]/80 border border-[#9D4EDD]/30">
+                  <span className="text-[11px] font-medium text-[#D6B2FF] flex items-center gap-1.5">
+                    <CreditCard size={12} />
+                    Número de parcelas:
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="48"
+                    value={newCatExpenseInstallments}
+                    onChange={(e) =>
+                      setNewCatExpenseInstallments(
+                        Math.max(1, parseInt(e.target.value, 10) || 1)
+                      )
+                    }
+                    className="w-20 min-h-[36px] px-2.5 py-1 rounded-lg bg-[#0D0B18] border border-white/10 text-xs text-white text-center focus:outline-none focus:border-[#D6B2FF]"
+                  />
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
